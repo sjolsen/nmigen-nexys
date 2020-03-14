@@ -495,3 +495,29 @@ So now I have to change this import from `nmigen_boards.nexys4ddr` to
 `nmigen_boards.nmigen_boards.nexys4ddr`, etc.
 
 TODO: Figure out a better way of doing this!
+
+I built and programmed the board after doing this and now it works as expected.
+
+# 2020-03-14
+
+## Submitting an upstream bug-fix
+
+After testing, I went to submit a PR on Github and checked existing PRs to see
+if there was anything special expected for this repo. I noticed someone
+mentioning that PRs should go to nmigen/nmigen-boards (I've been using
+m-labs/nmigen-boards as the upstream). I should probably set that as my upstream
+now.
+
+Well, right now of course the upstream for my local repository is set to my fork
+on Github. I could still change the Pip upstream to nmigen/nmigen{,-boards}. I
+don't see a way to change what Github says my repo is forked from, though.
+
+I figured I might just send the PR to nmigen/nmigen-boards from my fork, but
+it's not listed in the available HEADs. I guess I'll just delete my fork and
+re-fork the nmigen copy.
+
+Now to hopefully avoid breaking things, I'm going to go back into my local copy,
+move the fix onto a new branch, and reset master before resetting my remote. I
+manged this more or less painlessly.
+
+I successfully created the pull request. We'll see how that goes.
