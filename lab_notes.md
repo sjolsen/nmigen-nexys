@@ -68,3 +68,60 @@ INFO: 0 processes.
 INFO: Build completed successfully, 1 total action
 INFO: Build completed successfully, 1 total action
 ```
+
+I've noticed that pylint doesn't automatically pick up Bazel's Pip dependencies
+(this is honestly not surprising). Ideally it would actually use the Bazel rules
+so that, for example, unavailable imports would get flagged, but it seems good
+enough just to install the same dependencies globally with `pip3 install -r
+pip_requirements.txt`.
+
+# Board ("platform") support
+
+nMigen uses class types called "platforms" to implement board support. The
+nmigen-board package doesn't provide a platform for the [Nexys
+A7-100T](https://reference.digilentinc.com/reference/programmable-logic/nexys-a7/start)
+board I'm using. Fortunately, it does provide a platform for an older Digilent
+board, the [Nexys 4
+DDR](https://store.digilentinc.com/nexys-4-ddr-artix-7-fpga-trainer-board-recommended-for-ece-curriculum/).
+My plan to begin with was to copy the
+[`Nexys4DDRPlatform`](https://github.com/m-labs/nmigen-boards/blob/d53687cdcfc13f38eb22fd2eee66aaeeac9773dc/nmigen_boards/nexys4ddr.py)
+implementation and modify it for the Nexys A7. However, when I pulled up the
+constraints file for the [factory
+demo](https://reference.digilentinc.com/reference/programmable-logic/nexys-a7/nexys-a7-100t-oob)
+I've been using, I found that the Nexys 4 definitions were already mostly
+correct, right down to the inverted outputs for the seven-segment displays!
+
+TODO: The SPI interface may need updating; the A7 constraints file has comments
+indicating that it's a quad-SPI interface, although I only see data and
+chip-select signals. I should check the schematic.
+
+TODO: I also noticed that the Nexys 4 platform class defines DDR2 resources, and
+I don't see any corresponding entries in the example project's constraints file.
+The DDR interface seems to be handled by some sort of IP instantiation wizard in
+Vivado itself. The configuration is stored in an XML file named `mig.prj`. I
+haven't closely checked the definitions, but it looks like it basically matches.
+
+TODO: The Pmod connectors are also missing from the Nexys 4 platform class. I
+can add those in later pretty easily.
+
+Given all this, instead of copying and modifying the definition of
+`Nexys4DDRPlatform`, I'm going to inherit from it and leave everything untouched
+to start with. This gives me this very simple implementation for
+`nexysa7100t.py`:
+
+```python
+from nmigen_boards.nexys4ddr import *
+from nmigen_boards.test.blinky import *
+
+
+class NexysA7100TPlatform(Nexys4DDRPlatform):
+    pass
+
+
+if __name__ == "__main__":
+    NexysA7100TPlatform().build(Blinky(), do_program=True)
+```
+
+This `__main__` implementation seems to be just for testing the platform class;
+presumably whatever design I write later will set up the arguments to `build`
+itself.
