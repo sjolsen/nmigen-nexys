@@ -1,2 +1,2 @@
-git+https://github.com/m-labs/nmigen.git
-git+https://github.com/m-labs/nmigen-boards.git
+git+https://github.com/nmigen/nmigen.git
+git+https://github.com/sjolsen/nmigen-boards.git@85a5d80

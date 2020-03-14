@@ -427,3 +427,104 @@ def Display7SegResource(*args, a, b, c, d, e, f, g, dp=None, invert=False,
 ```
 
 The dot doesn't respect the value of `invert`!
+
+## Fixing a bug in nMigen
+
+The bug (I'm assuming it's a bug; maybe it's deliberate to make the decimal
+point ignore the value of `invert`, but I doubt it) is in the nmigen-board
+repository. I forked the repo on Github and cloned it locally. I tried pointing
+pip_requirements.txt to the local repo, and that worked... once. It doesn't seem
+to want to re-fetch the repository, even after committing my changes there. I
+reckon I can either pin a specific commit in the requirements file or tell Bazel
+to use a local repository. I like the latter idea better, because then I don't
+have to commit changes to test them.
+
+TODO: I also pip installed the local repo so it would show up in VSCode, but
+again that's a copy. Eventually I'd really like it to find the right repository.
+
+To point Bazel at the local copy, I removed the entry from pip_requirements.txt
+entirely and created a new `WORKSPACE` repository:
+
+```python
+new_local_repository(
+    name = "nmigen_boards",
+    path = "C:/Users/Stuart/nmigen-boards",
+    build_file = "BUILD.nmigen_boards",
+)
+```
+
+This just stuffs everything into a single `py_library`:
+
+```python
+load("@pip_deps//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_library")
+
+py_library(
+    name = "nmigen_boards",
+    srcs = glob(["**/*.py"]),
+    deps = [requirement("nmigen")],
+    visibility = ["//visibility:public"],
+)
+```
+
+And now my platform library just points to the external repo:
+
+```python
+py_binary(
+    name = "nexysa7100t",
+    srcs = ["nexysa7100t.py"],
+    deps = ["@nmigen_boards//:nmigen_boards"],
+)
+```
+
+Unfortunately now Python can't find the imports, because when using the Pip
+rules the libraries go into the top-level namespace, but when using an external
+repository they go under a top-level package with the same name as the Bazel
+repo:
+
+```
+Traceback (most recent call last):
+  File "\\?\C:\Users\Stuart\AppData\Local\Temp\Bazel.runfiles_ecw6pxuc\runfiles\nmigen_nexys\demo.py", line 3, in <module>
+    from nexysa7100t import NexysA7100TPlatform
+  File "\\?\C:\Users\Stuart\AppData\Local\Temp\Bazel.runfiles_ecw6pxuc\runfiles\nmigen_nexys\nexysa7100t.py", line 1, in <module>
+    from nmigen_boards.nexys4ddr import Nexys4DDRPlatform
+ModuleNotFoundError: No module named 'nmigen_boards.nexys4ddr'
+```
+
+So now I have to change this import from `nmigen_boards.nexys4ddr` to
+`nmigen_boards.nmigen_boards.nexys4ddr`, etc.
+
+TODO: Figure out a better way of doing this!
+
+I built and programmed the board after doing this and now it works as expected.
+
+# 2020-03-14
+
+## Submitting an upstream bug-fix
+
+After testing, I went to submit a PR on Github and checked existing PRs to see
+if there was anything special expected for this repo. I noticed someone
+mentioning that PRs should go to nmigen/nmigen-boards (I've been using
+m-labs/nmigen-boards as the upstream). I should probably set that as my upstream
+now.
+
+Well, right now of course the upstream for my local repository is set to my fork
+on Github. I could still change the Pip upstream to nmigen/nmigen{,-boards}. I
+don't see a way to change what Github says my repo is forked from, though.
+
+I figured I might just send the PR to nmigen/nmigen-boards from my fork, but
+it's not listed in the available HEADs. I guess I'll just delete my fork and
+re-fork the nmigen copy.
+
+Now to hopefully avoid breaking things, I'm going to go back into my local copy,
+move the fix onto a new branch, and reset master before resetting my remote. I
+manged this more or less painlessly.
+
+I successfully created the pull request. We'll see how that goes.
+
+## Merging the fix
+
+I've created a commit reverting all the changes in this repository needed to
+point Bazel to the local nmigen-boards repository. Now I'm going to point the
+Pip requirements file to my Github fork at the specific commit that fixes the
+problem (I'll also point the base nMigen repo to nmigen/nmigen). And `blaze run //:demo`... works!
