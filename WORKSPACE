@@ -25,9 +25,3 @@ pip_import(
 # and call it.
 load("@pip_deps//:requirements.bzl", "pip_install")
 pip_install()
-
-new_local_repository(
-    name = "nmigen_boards",
-    path = "C:/Users/Stuart/nmigen-boards",
-    build_file = "BUILD.nmigen_boards",
-)
