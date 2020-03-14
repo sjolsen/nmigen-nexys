@@ -531,3 +531,104 @@ problem (I'll also point the base nMigen repo to nmigen/nmigen). And `blaze run 
 
 The PR has now been merged upstream, so I can now point my requirements back
 upstream. I think I'll always use explicit commits, just to avoid headaches.
+
+## A more complex demo
+
+Right now I'm just displaying a moving pattern on the displays. I could
+multiplex the output to get a different image on each display, but first I'd
+like to try my hand at PWM modulation. The PWM encoding itself is super
+straightforward, just a ramp and comparator:
+
+```python
+class PWM(Elaboratable):
+
+    def __init__(self, duty_cycle: Signal):
+        super().__init__()
+        self.duty_cycle = duty_cycle
+        self.output = Signal()
+
+    def elaborate(self, platform: Platform) -> Module:
+        m = Module()
+        counter = Signal(self.duty_cycle.width, reset=0)
+        m.d.sync += counter.eq(counter + 1)
+        m.d.comb += self.output.eq(counter > self.duty_cycle)
+        return m
+```
+
+It's also really simple to apply this modulation, since I have independent
+control over the segment cathodes and the common anode. I'll just apply the PWM
+modulation to the anodes:
+
+```python
+m.submodules.pwm = pwm = PWM(0b11111111)
+m.d.comb += anodes.eq(Repl(pwm.output, 8))
+```
+
+A constant intensity isn't that interesting, so I'll ramp it with a triangle
+wave:
+
+```python
+class TriangleWave(Elaboratable):
+
+    def __init__(self, period: int, precision: int):
+        super().__init__()
+        self.period = period
+        self.precision = precision
+        self.output = Signal(precision)
+
+    def elaborate(self, platform: Platform) -> Module:
+        m = Module()
+        counter = Signal(range(self.period), reset=0)
+        m.d.sync += counter.eq(counter + 1)
+        half_wave = counter[-1]
+        high_bits = counter[-1 - self.precision : -1]
+        with m.If(half_wave == 0):
+            m.d.comb += self.output.eq(high_bits)
+        with m.Else():
+            m.d.comb += self.output.eq(C(-1, len(high_bits)) - high_bits)
+        return m
+```
+
+```python
+m.submodules.pwm = pwm = PWM(triangle.output)
+```
+
+That works, but the intensity ramping is very non-linear. That's to be expected,
+since PWM should produce a linear luminous intensity, but human perception of
+luminous intensity follows a power law. The simplest way to correct for that
+would probably be to square the output, treating it as a fraction of 1. So for
+instance:
+
+```
+value = 0b0.10001000  # Not 136, but 1/2 + 1/32
+encoding = 0b10001000  # Related by a factor of 256
+squared_encoding 
+  = encoding * encoding
+  = 0b10001000 * 0b10001000
+  =   0b0000_0100_0100_0000
+    + 0b0100_0100_0000_0000
+  =   0b0100_1000_0100_0000  # Related by a factor of 256 * 256
+squared  = 0b0.0100100001000000
+        ~= 0b0.01001000
+```
+
+Encoding this in nMigen:
+
+```python
+def SquareFraction(m: Module, input: Signal) -> Signal:
+    widened = Signal(2 * input.width)
+    m.d.comb += widened.eq(Cat(C(0, input.width), input))
+    squared = Signal(2 * input.width)
+    m.d.comb += squared.eq(widened * widened)
+    narrowed = Signal(input.width)
+    m.d.comb += narrowed.eq(squared[input.width:])
+    return narrowed
+```
+
+```python
+m.submodules.pwm = pwm = PWM(SquareFraction(m, triangle.output))
+```
+
+Run and program, and... that made it worse! It never gets really dim, and it
+appears to periodically jump to high intensity and very slightly gradually dim.
+What did I do wrong?
