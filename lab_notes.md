@@ -521,3 +521,10 @@ move the fix onto a new branch, and reset master before resetting my remote. I
 manged this more or less painlessly.
 
 I successfully created the pull request. We'll see how that goes.
+
+## Merging the fix
+
+I've created a commit reverting all the changes in this repository needed to
+point Bazel to the local nmigen-boards repository. Now I'm going to point the
+Pip requirements file to my Github fork at the specific commit that fixes the
+problem (I'll also point the base nMigen repo to nmigen/nmigen). And `blaze run //:demo`... works!
