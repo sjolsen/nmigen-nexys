@@ -1,5 +1,5 @@
-from nmigen_boards.nexys4ddr import Nexys4DDRPlatform
-from nmigen_boards.test.blinky import Blinky
+from nmigen_boards.nmigen_boards.nexys4ddr import Nexys4DDRPlatform
+from nmigen_boards.nmigen_boards.test.blinky import Blinky
 
 
 class NexysA7100TPlatform(Nexys4DDRPlatform):

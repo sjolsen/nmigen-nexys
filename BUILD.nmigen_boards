@@ -1,0 +1,9 @@
+load("@pip_deps//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_library")
+
+py_library(
+    name = "nmigen_boards",
+    srcs = glob(["**/*.py"]),
+    deps = [requirement("nmigen")],
+    visibility = ["//visibility:public"],
+)
