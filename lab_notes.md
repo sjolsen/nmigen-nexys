@@ -1,4 +1,6 @@
-# Basic setup
+# 2020-03-13
+
+## Basic setup
 
 I decided to use Bazel to manage things, since I'm already very familiar with
 the Google-internal equivalent and I know it supports Pip. The first thing that
@@ -75,7 +77,7 @@ so that, for example, unavailable imports would get flagged, but it seems good
 enough just to install the same dependencies globally with `pip3 install -r
 pip_requirements.txt`.
 
-# Board ("platform") support
+## Board ("platform") support
 
 nMigen uses class types called "platforms" to implement board support. The
 nmigen-board package doesn't provide a platform for the [Nexys
@@ -125,3 +127,225 @@ if __name__ == "__main__":
 This `__main__` implementation seems to be just for testing the platform class;
 presumably whatever design I write later will set up the arguments to `build`
 itself.
+
+## Programming
+
+The moment of truth: plug the board in, remember to turn the power switch on,
+and `blaze run //:nexysa7100t`! And...
+
+```
+PS C:\Users\Stuart\nmigen-nexys> bazel run //:nexysa7100t
+INFO: Analyzed target //:nexysa7100t (0 packages loaded, 0 targets configured).
+INFO: Found 1 target...
+Target //:nexysa7100t up-to-date:
+  bazel-bin/nexysa7100t.exe
+  bazel-bin/nexysa7100t.zip
+INFO: Elapsed time: 0.239s, Critical Path: 0.08s
+INFO: 1 process: 1 local.
+INFO: Build completed successfully, 2 total actions
+INFO: Build completed successfully, 2 total actions
+Traceback (most recent call last):
+  File "\\?\C:\Users\Stuart\AppData\Local\Temp\Bazel.runfiles_m41vxhbv\runfiles\nmigen_nexys\nexysa7100t.py", line 10, in <module>
+    NexysA7100TPlatform().build(Blinky(), do_program=True)
+  File "C:\Users\Stuart\AppData\Local\Programs\Python\Python38-32\lib\site-packages\nmigen\build\plat.py", line 76, in build
+    require_tool(tool)
+  File "C:\Users\Stuart\AppData\Local\Programs\Python\Python38-32\lib\site-packages\nmigen\_toolchain.py", line 33, in require_tool
+    raise ToolNotFound("Could not find required tool {} in PATH. Place "
+nmigen._toolchain.ToolNotFound: Could not find required tool yosys in PATH. Place it directly in PATH or specify path explicitly via the YOSYS environment variable
+```
+
+So I need to install Yosys. Following the instructions on [this
+page](http://www.clifford.at/yosys/download.html), I downloaded a prebuilt
+Windows ZIP archive. I extracted this to `C:\Program Files (x86)\Yosys` and
+added this to my `PATH`. Retrying gives:
+
+```
+nmigen._toolchain.ToolNotFound: Could not find required tool vivado in PATH. Place it directly in PATH or specify path explicitly via the VIVADO environment variable
+```
+
+Okay, I know I have Vivado installed -- I had it open five minutes ago. I went
+to the Start menu, found the Vivado shortcut, opened its location in Explorer,
+and added a new environment variable `VIVADO` pointing to that shortcut, though
+rather than pointing to the shortcut itself, it copied its target,
+`C:\Xilinx\Vivado\2019.2\bin\unwrapped\win64.o\vvgl.exe`. Close enough. Restart
+VSCode and try again...
+
+Now I get an error dialogue that just says "Cannot locate target loader
+'-mode'". Very helpful. Well poking around a bit, I see there's another shortcut
+to launch a Vivado TCL shell, and its target is `%SystemRoot%\system32\cmd.exe /k C:\Xilinx\Vivado\2019.2\bin\vivado.bat -mode tcl`. Now that's promising; if I
+try setting the `VIVADO` environment variable to that batch file...
+
+Success! Vivado is synthesising something (I'm not going to try to copy the
+output here). Now the DRC finished (with zero errors!) and it's routing...
+running write_bitstream... writing top.bit...
+
+```
+Loading bitfile top.bit
+Writing file ./top.bin
+Writing log file ./top.prm
+===================================
+Configuration Memory information
+===================================
+File Format        BIN
+Interface          SPIX4
+Size               16M
+Start Address      0x00000000
+End Address        0x00FFFFFF
+
+Addr1         Addr2         Date                    File(s)
+0x00000000    0x003A607B    Mar 13 23:45:57 2020    top.bit
+0 Infos, 0 Warnings, 0 Critical Warnings and 0 Errors encountered.
+write_cfgmem completed successfully
+# quit
+INFO: [Common 17-206] Exiting Vivado at Fri Mar 13 23:46:01 2020...
+Traceback (most recent call last):
+  File "\\?\C:\Users\Stuart\AppData\Local\Temp\Bazel.runfiles_q7qhmbk2\runfiles\nmigen_nexys\nexysa7100t.py", line 10, in <module>
+    NexysA7100TPlatform().build(Blinky(), do_program=True)
+  File "C:\Users\Stuart\AppData\Local\Programs\Python\Python38-32\lib\site-packages\nmigen\build\plat.py", line 86, in build
+    self.toolchain_program(products, name, **(program_opts or {}))
+  File "\\?\C:\Users\Stuart\AppData\Local\Temp\Bazel.runfiles_q7qhmbk2\runfiles\pypi__nmigen_boards_0_1_dev90_gfae1ad4\nmigen_boards\nexys4ddr.py", line 171, in toolchain_program
+    subprocess.run([xc3sprog, "-c", "nexys4", bitstream_filename], check=True)
+  File "C:\Users\Stuart\AppData\Local\Programs\Python\Python38-32\lib\subprocess.py", line 489, in run
+    with Popen(*popenargs, **kwargs) as process:
+  File "C:\Users\Stuart\AppData\Local\Programs\Python\Python38-32\lib\subprocess.py", line 854, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "C:\Users\Stuart\AppData\Local\Programs\Python\Python38-32\lib\subprocess.py", line 1307, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+FileNotFoundError: [WinError 2] The system cannot find the file specified
+```
+
+Okay, it looks like Vivado finished doing what nMigen asked it to, and nMigen
+itself failed to find a file. From the context, it's pretty clear it's trying to
+use a program I don't have installed called xc3sprog. It seems a little silly to
+use a third-party tool for programming when we're already using Vivado for
+synthesis, but okay, I'll try to play ball. There's a [Windows
+build](https://sourceforge.net/projects/xc3sprog/files/latest/download) of that,
+too. Once again extracting, adding to `PATH`, restarting VSCode and retrying...
+
+That's disappointing, it's re-running Vivado. I guess that's not too surprising,
+nMigen seems more of a middle-end than a build system. Okay, this time the
+programmer ran, but gave an error:
+
+```
+INFO: [Common 17-206] Exiting Vivado at Fri Mar 13 23:54:31 2020...
+XC3SPROG (c) 2004-2011 xc3sprog project $Rev$ OS: Windows
+Free software: If you contribute nothing, expect nothing!
+Feedback on success/failure/enhancement requests:
+        http://sourceforge.net/mail/?group_id=170565
+Check Sourceforge for updates:
+        http://sourceforge.net/projects/xc3sprog/develop
+
+Libusb not found, expect failure
+Could not open FTDI device (using libftdi): usb_find_busses() failed
+FTD2XX Open failed
+usage:  xc3sprog -c cable [options] <file0spec> <file1spec> ...
+        List of known cables is given with -c follow by no or invalid cablename
+        filespec is filename:action:offset:style:length
+        action on of 'w|W|v|r|R'
+        w: erase whole area, write and verify
+        W: Write with auto-sector erase and verify
+        v: Verify device against filename
+        r: Read from device,write to file, don't overwrite existing file
+        R: Read from device and write to file, overwrite existing file
+        Default action is 'w'
+
+        Default offset is 0
+
+        style: One of BIT|BIN|BPI|MCS|IHEX|HEX
+        BIT: Xilinx .bit format
+        BIN: Binary format
+        BPI: Binary format not bit reversed
+        MCS: Intel Hex File, LSB first
+        IHEX: INTEL Hex format, MSB first (Use for Xilinx .mcs files!)
+        HEX:  Hex dump format
+        Default for FPGA|SPI|XCF is BIT
+        Default for CPLD is JED
+        Default for XMEGA is IHEX
+        Default length is whole device
+Traceback (most recent call last):
+  File "\\?\C:\Users\Stuart\AppData\Local\Temp\Bazel.runfiles_9fln0phs\runfiles\nmigen_nexys\nexysa7100t.py", line 10, in <module>
+    NexysA7100TPlatform().build(Blinky(), do_program=True)
+  File "C:\Users\Stuart\AppData\Local\Programs\Python\Python38-32\lib\site-packages\nmigen\build\plat.py", line 86, in build
+    self.toolchain_program(products, name, **(program_opts or {}))
+  File "\\?\C:\Users\Stuart\AppData\Local\Temp\Bazel.runfiles_9fln0phs\runfiles\pypi__nmigen_boards_0_1_dev90_gfae1ad4\nmigen_boards\nexys4ddr.py", line 171, in toolchain_program
+    subprocess.run([xc3sprog, "-c", "nexys4", bitstream_filename], check=True)
+  File "C:\Users\Stuart\AppData\Local\Programs\Python\Python38-32\lib\subprocess.py", line 512, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['xc3sprog', '-c', 'nexys4', 'C:\\Users\\Stuart\\AppData\\Local\\Temp\\nmigen_nsvtkqt4_top.bit']' returned non-zero exit status 255.
+```
+
+(What the hell, I have to install libusb myself?) Well, the [libusb Github
+page](https://github.com/libusb/libusb/wiki/Windows) suggests using something
+called Zadig. Downloading and running that, I see two Digilent USB interfaces
+after selecting Options > List All Devices. They list FTDIBUS v2.12.28.0 as the
+current driver. The libusb wiki page recommended using WinUSB, so I'll try that
+option first, and I'll try it with interface 0. That claimed to be successful.
+
+Now fortunately the last run printed the command line, so I guess I can run that
+manually instead of waiting for Vivado to regenerate the bit file. I notice it's
+passing `nexys4` as an argument; we'll see if that works...
+
+```
+Libusb not found, expect failure
+```
+
+No dice -- oh, maybe I need to replug the board. No, that didn't work. Let's try
+overriding the driver for interface 1, replugging, and...
+
+Still doesn't work, although now it doesn't print the usage message for xc3sprog
+(God, that's an awful name to type), just the libusb/ftdi error message. I guess
+I need to actually _install_ libusb. Downloading a 7z archive from libusb.info,
+I see DLLs for a few different Windows build variants. I guess I'll try plain
+win32, since that's what's in the filename for the xc3sprog tarball. My first
+attempt is to extract the DLL into the xc3sprog directory, which unsurprisingly
+doesn't work. If I actually read the README from the libusb archive, I see it
+says:
+
+```
+  - Compile and run your application. If you use the DLL version of libusb-1.0,
+    remember that you need to have a copy of the DLL either in the runtime
+    directory or in system32
+```
+
+I guess that means either this project's directory (I don't want to do that) or
+system32 (that brings back memories!). system32 it is, God help me. And... it
+doesn't work. Let's try restarting VSCode (I'm running the programmer in a
+subshell) and replug the board, just to make sure.
+
+No, that didn't work, either. Well let's not screw around too much with
+system32, I'll delete that DLL and try putting them in the project directory.
+Just for sanity's sake, I'll start with the MS32 DLL again. No dice. MS64 also
+doesn't work. MinGW32 doesn't work, and neither does MinGW64. None of them work!
+
+Moving back a step, maybe the problem is that I used the WinUSB option in Zadig
+instead of one of the libusb options (duh, but hey, it was recommended!). I'll
+start with interface 0 again, this time with libusb-win32. Replug and...
+
+```
+PS C:\Users\Stuart\nmigen-nexys> xc3sprog.exe -c nexys4 C:\Users\Stuart\AppData\Local\Temp\nmigen_nsvtkqt4_top.bit
+XC3SPROG (c) 2004-2011 xc3sprog project $Rev$ OS: Windows
+Free software: If you contribute nothing, expect nothing!
+Feedback on success/failure/enhancement requests:
+        http://sourceforge.net/mail/?group_id=170565
+Check Sourceforge for updates:
+        http://sourceforge.net/projects/xc3sprog/develop
+
+Using Libftdi,
+Can't open datafile C:\Users\Stuart\AppData\Local\Temp\nmigen_nsvtkqt4_top.bit: No such file or directory
+```
+
+Hey, that's different! I guess the problem here is that the bitstream was a
+temporary file; that's not surprising, I noticed it didn't tab complete earlier.
+
+```
+PS C:\Users\Stuart\nmigen-nexys> ls C:\Users\Stuart\AppData\Local\Temp\nmigen_nsvtkqt4_top.bit
+ls : Cannot find path 'C:\Users\Stuart\AppData\Local\Temp\nmigen_nsvtkqt4_top.bit' because it does not exist.
+```
+
+Yeah, okay, time to run nMigen again. The lights from the demo all went dark, so
+I assume it's programming, and... Yes! Blinking lights! The seven-segment
+displays are dimly lit though, that's probably not supposed to happen...
+
+The row of green LEDs are blinking and the corresponding switches invert them.
+The RGB LEDs are off and the buttons don't do anything -- I guess that has to do
+with how resources are declared.
