@@ -528,3 +528,6 @@ I've created a commit reverting all the changes in this repository needed to
 point Bazel to the local nmigen-boards repository. Now I'm going to point the
 Pip requirements file to my Github fork at the specific commit that fixes the
 problem (I'll also point the base nMigen repo to nmigen/nmigen). And `blaze run //:demo`... works!
+
+The PR has now been merged upstream, so I can now point my requirements back
+upstream. I think I'll always use explicit commits, just to avoid headaches.

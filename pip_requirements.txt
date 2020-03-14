@@ -1,2 +1,4 @@
-git+https://github.com/nmigen/nmigen.git
-git+https://github.com/sjolsen/nmigen-boards.git@85a5d80
+# master as of 2020-03-14 15:34 PDT
+git+https://github.com/nmigen/nmigen.git@12c79025f3cff1a3c8f5d608905b6d44f9f31ffc
+# master as of 2020-03-14 15:34 PDT
+git+https://github.com/nmigen/nmigen-boards.git@c330044cf388d613d7b82c4de0f41e0c7ecde72f
