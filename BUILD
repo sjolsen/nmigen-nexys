@@ -6,3 +6,9 @@ py_binary(
     srcs = ["nexysa7100t.py"],
     deps = [requirement("nmigen_boards")],
 )
+
+py_binary(
+    name = "demo",
+    srcs = ["demo.py"],
+    deps = [":nexysa7100t"],
+)

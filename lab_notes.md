@@ -349,3 +349,81 @@ displays are dimly lit though, that's probably not supposed to happen...
 The row of green LEDs are blinking and the corresponding switches invert them.
 The RGB LEDs are off and the buttons don't do anything -- I guess that has to do
 with how resources are declared.
+
+## A simple custom design
+
+I want to use the seven-segment display, because it's flashy and I've already
+played with it a bit using the factory example in Vivado. The easiest thing to
+do is take the Blinky example from the nmigen-board test directory and modify
+it. I've pulled the timer logic out into a separate `Elaboratable` just for fun:
+
+```python
+class Timer(Elaboratable):
+
+    def __init__(self, reload: int):
+        super().__init__()
+        self._reload = reload
+        self.triggered = Signal()
+
+    def elaborate(self, platform: Platform) -> Module:
+        m = Module()
+        counter = Signal(range(self._reload + 1), reset=self._reload)
+        m.d.comb += self.triggered.eq(counter == 0)
+        with m.If(counter == 0):
+            m.d.sync += counter.eq(counter.reset)
+        with m.Else():
+            m.d.sync += counter.eq(counter - 1)
+        return m
+```
+
+The demo displays the same thing on every display simultaneously (the segment
+cathodes are multiplexed by enabling/disabling current into the common anodes).
+In this case, it's just a bit pattern being shifted through the segments every
+half-second:
+
+```python
+class Demo(Elaboratable):
+
+    def elaborate(self, platform: Platform) -> Module:
+        m = Module()
+
+        clk_freq = platform.default_clk_frequency
+        m.submodules.timer = timer = Timer(int(clk_freq // 2))
+
+        segments = platform.request('display_7seg')
+        anodes = platform.request('display_7seg_an')
+        m.d.comb += anodes.eq(0b11111111)  # Always on
+
+        shift_register = Signal(8, reset=0b11110000)
+        with m.If(timer.triggered):
+            m.d.sync += shift_register.eq(
+                shift_register << 1 | shift_register >> 7)
+
+        m.d.comb += segments.eq(shift_register)
+
+        return m
+```
+
+And it works! Well, mostly. It behaves almost exactly the way it should, except
+that the dot is inverted -- or rather, _isn't_. Looking at the way the
+seven-segment display resource is implemented, it's clear why:
+
+```python
+def Display7SegResource(*args, a, b, c, d, e, f, g, dp=None, invert=False,
+                        conn=None, attrs=None):
+    ios = []
+    ios.append(Subsignal("a", Pins(a, dir="o", invert=invert, conn=conn, assert_width=1)))
+    ios.append(Subsignal("b", Pins(b, dir="o", invert=invert, conn=conn, assert_width=1)))
+    ios.append(Subsignal("c", Pins(c, dir="o", invert=invert, conn=conn, assert_width=1)))
+    ios.append(Subsignal("d", Pins(d, dir="o", invert=invert, conn=conn, assert_width=1)))
+    ios.append(Subsignal("e", Pins(e, dir="o", invert=invert, conn=conn, assert_width=1)))
+    ios.append(Subsignal("f", Pins(f, dir="o", invert=invert, conn=conn, assert_width=1)))
+    ios.append(Subsignal("g", Pins(g, dir="o", invert=invert, conn=conn, assert_width=1)))
+    if dp is not None:
+        ios.append(Subsignal("dp", Pins(dp, dir="o", conn=conn, assert_width=1)))
+    if attrs is not None:
+        ios.append(attrs)
+    return Resource.family(*args, default_name="display_7seg", ios=ios)
+```
+
+The dot doesn't respect the value of `invert`!
