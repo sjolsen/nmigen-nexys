@@ -884,3 +884,8 @@ before.
 
 TODO: I noticed at one point Vivado complaining about not using DSP resources to
 perform the multiplication. Might be worth checking out.
+
+I figured out why the curve was still so bad while I was working on the
+manual-brightness branch: the anode outputs have to be inverted because they're
+switching current through P-type transistors, and they're not inverted in the
+platform definition.

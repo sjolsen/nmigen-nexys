@@ -73,7 +73,7 @@ class Demo(Elaboratable):
 
         segments = platform.request('display_7seg')
         anodes = platform.request('display_7seg_an')
-        m.d.comb += anodes.eq(Repl(pwm.output, 8))
+        m.d.comb += anodes.eq(Repl(~pwm.output, 8))
 
         shift_register = Signal(8, reset=0b11110000)
         with m.If(timer.triggered):
