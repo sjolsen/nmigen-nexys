@@ -632,3 +632,255 @@ m.submodules.pwm = pwm = PWM(SquareFraction(m, triangle.output))
 Run and program, and... that made it worse! It never gets really dim, and it
 appears to periodically jump to high intensity and very slightly gradually dim.
 What did I do wrong?
+
+## Writing a simulation testbed
+
+I want to write a unit test for `SquareFraction`, but I don't want to mess with
+the `__main__` logic for my demo to do it. The obvious thing to do is to split
+it out into its own module. Now, I could put the test bed and its `__main__`
+logic in the same file, but I'd like to hook it into py_test, so I'll make that
+separate, too.
+
+After splitting out the definition of `SquareFraction` into its own file and
+creating a test file importing it, I add the corresponding Bazel rules,
+including `//:square_fraction` as a dependency of both the demo and the test
+bed:
+
+```python
+py_library(
+    name = "square_fraction",
+    srcs = ["square_fraction.py"],
+    deps = [requirement("nmigen")],
+)
+
+py_test(
+    name = "square_fraction_test",
+    srcs = ["square_fraction_test.py"],
+    deps = [":square_fraction"],
+)
+
+py_binary(
+    name = "demo",
+    srcs = ["demo.py"],
+    deps = [
+        ":nexysa7100t",
+        ":square_fraction",
+    ],
+)
+```
+
+Following [Robert Baruch's
+example](https://github.com/RobertBaruch/nmigen-tutorial/blob/master/7_simulating.md), I set up a simple simulation process:
+
+```python
+m = Module()
+sim = Simulator(m)
+
+sf_input = Signal(8)
+sf_output = SquareFraction(m, input)
+
+def test_value(input: int, expected: int):
+    yield sf_input.eq(input)
+    yield Settle()
+    actual = yield sf_output
+    assert expected == actual
+
+def process():
+    test_value(input=0b0000_0000, expected=0b0000_0000)
+    test_value(input=0b1000_1000, expected=0b0100_1000)
+    test_value(input=0b1111_1111, expected=0b1111_1110)
+
+sim.add_process(process)
+sim.run()
+```
+
+The test builds and runs, but fails -- which is a good sign. Inspecting the error logs shows that something is pulling in `six` but can't access it:
+
+```
+ModuleNotFoundError: No module named 'six'
+```
+
+Adding this to pip_requirements.txt doesn't fix it. Adding `import six` at the
+top of the test module fixes it, but... I'm not a huge fan. Anyway, now it's
+complaining about the `width` attribute not existing on `input`, which makes
+sense because it's an `int`, not a `Signal`. I did declare the input to
+`SquareFraction` a signal, but I guess nothing is doing type checking :(.
+Anyway, using `sf_input` like I meant to fixes the problem.
+
+Now, though, it's upset that `process` isn't a generator function. Ah, I
+probably just need `yield from`. Yep! Now it's actually failing on the
+assertion, which is real progress. Unfortunately it doesn't show me the actual
+value. The ideal solution would be to use `assertEqual` from `unittest`. Doing
+just that:
+
+```python
+class SquareFractionTest(unittest.TestCase):
+
+    def _run_test(self, input: int, expected: int):
+        m = Module()
+        sim = Simulator(m)
+
+        sf_input = Signal(8)
+        sf_output = SquareFraction(m, sf_input)
+
+        def process():
+            yield sf_input.eq(input)
+            yield Settle()
+            actual = yield sf_output
+            self.assertEqual(expected, actual)
+
+        sim.add_process(process)
+        sim.run()
+
+    def test_zero(self):
+        self._run_test(input=0b0000_0000, expected=0b0000_0000)
+
+    def test_0b1000_1000(self):
+        self._run_test(input=0b1000_1000, expected=0b0100_1000)
+
+    def test_max(self):
+        self._run_test(input=0b1111_1111, expected=0b1111_1110)
+```
+
+(Ideally I'd use parameterized test cases and a large number of examples, but
+I'm being lazy). Now, `test_zero` passes, but the other two fail:
+
+```
+======================================================================
+FAIL: test_0b1000_1000 (__main__.SquareFractionTest)
+----------------------------------------------------------------------
+...
+AssertionError: 72 != 0
+
+======================================================================
+FAIL: test_max (__main__.SquareFractionTest)
+----------------------------------------------------------------------
+...
+AssertionError: 254 != 0
+```
+
+So, why is the output zero? Well looking at the definition of `SquareFraction`:
+
+```python
+m.d.comb += widened.eq(Cat(C(0, input.width), input))
+```
+
+Hmm... I had assumed that the arguments to `Cat` were big-endian like in
+Verilog, but the documentation for `Cat` explicitly says:
+
+```
+Form a compound ``Value`` from several smaller ones by concatenation.
+The first argument occupies the lower bits of the result.
+```
+
+So what happens if I reverse the concatenation expression? Well... it still
+fails with zeroes. I'd like to see the intermediate signal values, and to do
+that I'll first convert `SquareFraction` to a class:
+
+```python
+class SquareFraction(Elaboratable):
+
+    def __init__(self, input: Signal):
+        super().__init__()
+        self.input = input
+        self.widened = Signal(2 * input.width)
+        self.squared = Signal(2 * input.width)
+        self.output = self.narrowed = Signal(input.width)
+
+    @property
+    def ports(self):
+        return ('input', 'widened', 'squared', 'output')
+
+    def elaborate(self, platform: Platform) -> Module:
+        m = Module()
+        m.d.comb += self.widened.eq(Cat(self.input, C(0, self.input.width)))
+        m.d.comb += self.squared.eq(self.widened * self.widened)
+        m.d.comb += self.narrowed.eq(self.squared[self.input.width:])
+        return m
+```
+
+Now the test will have to be updated to deal with an `Elaboratable` instead of
+what effectively amounts to a macro:
+
+```python
+def _run_test(self, input: int, expected: int):
+    m = Module()
+    sim = Simulator(m)
+    m.submodules.sf = sf = SquareFraction(Signal(8))
+
+    def process():
+        yield sf.input.eq(input)
+        yield Settle()
+        actual = yield sf.output
+        for port in sf.ports:
+            signal = getattr(sf, port)
+            value = yield signal
+            print(f'{port}: 0b{value:0{signal.width}b}')
+        self.assertEqual(expected, actual)
+
+    sim.add_process(process)
+    sim.run()
+```
+
+It still fails of course, but now there's useful debugging information:
+
+```
+input: 0b10001000
+widened: 0b0000000000000000
+squared: 0b0000000000000000
+output: 0b00000000
+input: 0b11111111
+widened: 0b0000000000000000
+squared: 0b0000000000000000
+output: 0b00000000
+input: 0b00000000
+widened: 0b0000000000000000
+squared: 0b0000000000000000
+output: 0b00000000
+```
+
+That's definitely wrong! What happened? Well, here's a hint:
+
+```
+\\?\C:\Users\Stuart\AppData\Local\Temp\Bazel.runfiles_gaursu09\runfiles\nmigen_nexys\square_fraction_test.py:14: UnusedElaboratable: <square_fraction.SquareFraction object at 0x03FDF100> created but never used
+  m.submodules.sf = sf = SquareFraction(Signal(8))
+UnusedElaboratable: Enable tracemalloc to get the object allocation traceback
+```
+
+I'm definitely using it, it's right there -- is it because I'm modifying the
+`Module` after passing it to the `Simulator`?
+
+```python
+        m = Module()
+        m.submodules.sf = sf = SquareFraction(Signal(8))
+        sim = Simulator(m)
+```
+
+```
+PS C:\Users\Stuart\nmigen-nexys> bazel test //:square_fraction_test
+INFO: Analyzed target //:square_fraction_test (0 packages loaded, 0 targets configured).
+INFO: Found 1 test target...
+Target //:square_fraction_test up-to-date:
+  bazel-bin/square_fraction_test.exe
+  bazel-bin/square_fraction_test.zip
+INFO: Elapsed time: 1.081s, Critical Path: 0.90s
+INFO: 3 processes: 3 local.
+INFO: Build completed successfully, 3 total actions
+//:square_fraction_test                                                  PASSED in 0.8s
+
+Executed 1 out of 1 test: 1 test passes.
+INFO: Build completed successfully, 3 total actions
+```
+
+Yes! Okay, now to integrate the `Elaboratable` into the demo.
+
+```python
+m.submodules.square_fracion = sf = SquareFraction(triangle.output)
+m.submodules.pwm = pwm = PWM(sf.output)
+```
+
+And... it works! It's still not a perfect curve, but it's better than it was
+before.
+
+TODO: I noticed at one point Vivado complaining about not using DSP resources to
+perform the multiplication. Might be worth checking out.

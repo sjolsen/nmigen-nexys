@@ -1,8 +1,9 @@
 import itertools
-
-from nexysa7100t import NexysA7100TPlatform
 from nmigen import *
 from nmigen.build import *
+
+from nexysa7100t import NexysA7100TPlatform
+from square_fraction import SquareFraction
 
 
 class Timer(Elaboratable):
@@ -59,16 +60,6 @@ class TriangleWave(Elaboratable):
         return m
 
 
-def SquareFraction(m: Module, input: Signal) -> Signal:
-    widened = Signal(2 * input.width)
-    m.d.comb += widened.eq(Cat(C(0, input.width), input))
-    squared = Signal(2 * input.width)
-    m.d.comb += squared.eq(widened * widened)
-    narrowed = Signal(input.width)
-    m.d.comb += narrowed.eq(squared[input.width:])
-    return narrowed
-
-
 class Demo(Elaboratable):
 
     def elaborate(self, platform: Platform) -> Module:
@@ -77,7 +68,8 @@ class Demo(Elaboratable):
         clk_period = int(platform.default_clk_frequency)
         m.submodules.timer = timer = Timer(clk_period // 2)
         m.submodules.triangle = triangle = TriangleWave(10 * clk_period, 8)
-        m.submodules.pwm = pwm = PWM(SquareFraction(m, triangle.output))
+        m.submodules.square_fracion = sf = SquareFraction(triangle.output)
+        m.submodules.pwm = pwm = PWM(sf.output)
 
         segments = platform.request('display_7seg')
         anodes = platform.request('display_7seg_an')
