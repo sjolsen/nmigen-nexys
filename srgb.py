@@ -11,12 +11,13 @@ def sRGBGamma(u: float) -> float:
         return ((200.0 * u + 11.0) / 211.0)**(12.0 / 5.0)
 
 
-def sRGBGammaU8(x: int) -> int:
-    u = float(x) / 256.0
+def sRGBGammaInt(xbits: int, ybits: int, x: int) -> int:
+    u = float(x) / float(2**xbits)
     v = sRGBGamma(u)
-    y = int(round(v * 256.0))
+    y = int(round(v * float(2**ybits)))
     return y
 
 
-def sRGBGammaU8LUT(input: Signal, output: Signal) -> FunctionLUT:
-    return FunctionLUT(sRGBGammaU8, input, output)
+def sRGBGammaLUT(input: Signal, output: Signal) -> FunctionLUT:
+    f = lambda x: sRGBGammaInt(input.width, output.width, x)
+    return FunctionLUT(f, input, output)

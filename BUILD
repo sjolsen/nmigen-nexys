@@ -50,15 +50,15 @@ py_library(
 )
 
 py_library(
-    name = "srgb",
-    srcs = ["srgb.py"],
-    deps = [":lut"],
-)
-
-py_library(
     name = "square_fraction",
     srcs = ["square_fraction.py"],
     deps = [requirement("nmigen")],
+)
+
+py_library(
+    name = "srgb",
+    srcs = ["srgb.py"],
+    deps = [":lut"],
 )
 
 py_test(
