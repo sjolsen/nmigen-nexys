@@ -4,7 +4,7 @@ from nmigen.build import *
 
 from nexysa7100t import NexysA7100TPlatform
 from pwm import PWM
-from square_fraction import SquareFraction
+from srgb import sRGBGammaU8LUT
 
 
 class Timer(Elaboratable):
@@ -54,12 +54,12 @@ class Demo(Elaboratable):
         clk_period = int(platform.default_clk_frequency)
         m.submodules.timer = timer = Timer(clk_period // 2)
         m.submodules.triangle = triangle = TriangleWave(10 * clk_period, 8)
-        m.submodules.square_fraction = sf = SquareFraction(triangle.output)
-        m.submodules.pwm = pwm = PWM(sf.output)
+        m.submodules.gamma = gamma = sRGBGammaU8LUT(triangle.output, Signal(8))
+        m.submodules.pwm = pwm = PWM(gamma.output)
 
         segments = platform.request('display_7seg')
         anodes = platform.request('display_7seg_an')
-        m.d.comb += anodes.eq(Repl(~pwm.output, 8))
+        m.d.comb += anodes.eq(Repl(pwm.output, 8))
 
         shift_register = Signal(8, reset=0b11110000)
         with m.If(timer.triggered):

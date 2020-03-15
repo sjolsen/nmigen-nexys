@@ -38,9 +38,21 @@ py_binary(
 )
 
 py_library(
+    name = "lut",
+    srcs = ["lut.py"],
+    deps = [requirement("nmigen")],
+)
+
+py_library(
     name = "pwm",
     srcs = ["pwm.py"],
     deps = [requirement("nmigen")],
+)
+
+py_library(
+    name = "srgb",
+    srcs = ["srgb.py"],
+    deps = [":lut"],
 )
 
 py_library(
@@ -64,7 +76,7 @@ py_binary(
     deps = [
         ":nexysa7100t",
         ":pwm",
-        ":square_fraction",
+        ":srgb",
     ],
 )
 
@@ -74,8 +86,8 @@ py_binary(
     deps = [
         ":bcd",
         ":display",
+        ":srgb",
         ":nexysa7100t",
-        ":square_fraction",
     ],
 )
 

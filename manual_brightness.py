@@ -5,7 +5,7 @@ from nmigen.hdl.rec import *
 from bcd import BCDRenderer, BinToBCD
 from display import DisplayBank, DisplayMultiplexer, SingleDisplayValue
 from nexysa7100t import NexysA7100TPlatform
-from square_fraction import SquareFraction
+from srgb import sRGBGammaU8LUT
 
 
 class ConversionPipeline(Elaboratable):
@@ -67,8 +67,8 @@ class ManualBrightness(Elaboratable):
         m.d.sync += rval_meta.eq(Cat(*switches))
         rval = Signal(8)
         m.d.sync += rval.eq(rval_meta)
-        m.submodules.square_fraction = sf = SquareFraction(rval)
-        lval = sf.output
+        m.submodules.gamma = gamma = sRGBGammaU8LUT(input=rval, output=Signal(8))
+        lval = gamma.output
         # Display raw binary on row LEDs for debugging
         rleds = Cat(*[platform.request('led', i) for i in range(8)])
         lleds = Cat(*[platform.request('led', i) for i in range(8, 16)])
