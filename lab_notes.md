@@ -889,3 +889,45 @@ I figured out why the curve was still so bad while I was working on the
 manual-brightness branch: the anode outputs have to be inverted because they're
 switching current through P-type transistors, and they're not inverted in the
 platform definition.
+
+NOTE: See below, I was wrong about this.
+
+## Side-by-side brightness comparison
+
+Ramping is fine enough, but I'd like to directly compare the transformed and
+untransformed brightness. I'm using eight bits of precision in both the sweep
+output -- i.e. the desired perceived brightness -- and the PWM output. I can
+therefore easily display both values in decimal, one on each half of the
+display. For instance, using the above example of `0b10001000` as the sweep
+output, I'd like to display:
+
+```
+  72  136
+```
+
+Here, the transformed value is on the left and the untransformed value is on the
+right. I'd like to apply independent PWM settings to each half using the
+displayed value directly as the duty cycle. Finally, I'll use eight of the
+switches as binary inputs.
+
+One caveat here is that because the displays are multiplexed and I'm displaying
+different data on them, I won't be able to run any single seven-segment display
+at 100% duty cycle. I'll have to time slice the eight displays (this is what the
+factory demo does), effectively limiting each one to 12.5% duty cycle.
+
+The first thing I'll do is make a new demo, so I can keep the old one. I'll call
+it `manual_brightness.py`. I'll also want to split out the PWM implementation
+into its own library.
+
+I went ahead and spent several hours implementing this without taking notes. It
+was a real pain to debug. On the bright side, I figured out how to get GTKWave
+working with Bazel test outputs. I also found out the real reason I wasn't
+getting the right PWM output: it wasn't that the anode output wasn't inverted
+(it was), but that my duty cycle logic was backwards. Also, you unfortunately
+don't get an error if you forget to assign a `.eq` expression to a domain --
+maybe you get a warning, but I didn't see it.
+
+Anyway, I got out of this what I wanted, which is a way to visualize the
+brightness curve. It looks okay, though the gamma function renders the output
+undetectable until the input is about 23. Maybe I'll solve that with a
+linearized region near zero, like sRGB does.

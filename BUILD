@@ -13,6 +13,37 @@ py_binary(
 )
 
 py_library(
+    name = "bcd",
+    srcs = ["bcd.py"],
+    deps = [requirement("nmigen")],
+)
+
+py_test(
+    name = "bcd_test",
+    srcs = ["bcd_test.py"],
+    deps = [
+        requirement("six"),  # TODO: Fix this, needed by the VCD library
+        ":bcd",
+    ],
+)
+
+py_binary(
+    name = "display",
+    srcs = ["display.py"],
+    deps = [
+        ":bcd",
+        ":nexysa7100t",
+        ":pwm",
+    ],
+)
+
+py_library(
+    name = "pwm",
+    srcs = ["pwm.py"],
+    deps = [requirement("nmigen")],
+)
+
+py_library(
     name = "square_fraction",
     srcs = ["square_fraction.py"],
     deps = [requirement("nmigen")],
@@ -32,6 +63,28 @@ py_binary(
     srcs = ["demo.py"],
     deps = [
         ":nexysa7100t",
+        ":pwm",
         ":square_fraction",
+    ],
+)
+
+py_binary(
+    name = "manual_brightness",
+    srcs = ["manual_brightness.py"],
+    deps = [
+        ":bcd",
+        ":display",
+        ":nexysa7100t",
+        ":square_fraction",
+    ],
+)
+
+py_test(
+    name = "manual_brightness_test",
+    srcs = ["manual_brightness_test.py"],
+    deps = [
+        requirement("six"),  # TODO: Fix this, needed by the VCD library
+        ":bcd",
+        ":manual_brightness",
     ],
 )
