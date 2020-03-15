@@ -1,5 +1,6 @@
 # master as of 2020-03-14 15:34 PDT
-git+https://github.com/nmigen/nmigen.git@12c79025f3cff1a3c8f5d608905b6d44f9f31ffc
+# git+https://github.com/nmigen/nmigen.git@12c79025f3cff1a3c8f5d608905b6d44f9f31ffc
+git+file://C:/Users/Stuart/nmigen@26fb9952cc75ff3dd57a5f27ee89807417f4244f
 # master as of 2020-03-14 15:34 PDT
 git+https://github.com/nmigen/nmigen-boards.git@c330044cf388d613d7b82c4de0f41e0c7ecde72f
 six

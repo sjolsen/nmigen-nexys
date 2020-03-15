@@ -3,6 +3,7 @@ from nmigen import *
 from nmigen.build import *
 
 from nexysa7100t import NexysA7100TPlatform
+from pwm import PWM
 from square_fraction import SquareFraction
 
 
@@ -21,21 +22,6 @@ class Timer(Elaboratable):
             m.d.sync += counter.eq(counter.reset)
         with m.Else():
             m.d.sync += counter.eq(counter - 1)
-        return m
-
-
-class PWM(Elaboratable):
-
-    def __init__(self, duty_cycle: Signal):
-        super().__init__()
-        self.duty_cycle = duty_cycle
-        self.output = Signal()
-
-    def elaborate(self, platform: Platform) -> Module:
-        m = Module()
-        counter = Signal(self.duty_cycle.width, reset=0)
-        m.d.sync += counter.eq(counter + 1)
-        m.d.comb += self.output.eq(counter > self.duty_cycle)
         return m
 
 

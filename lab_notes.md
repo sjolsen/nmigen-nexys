@@ -884,3 +884,30 @@ before.
 
 TODO: I noticed at one point Vivado complaining about not using DSP resources to
 perform the multiplication. Might be worth checking out.
+
+## Side-by-side brightness comparison
+
+Ramping is fine enough, but I'd like to directly compare the transformed and
+untransformed brightness. I'm using eight bits of precision in both the sweep
+output -- i.e. the desired perceived brightness -- and the PWM output. I can
+therefore easily display both values in decimal, one on each half of the
+display. For instance, using the above example of `0b10001000` as the sweep
+output, I'd like to display:
+
+```
+  72  136
+```
+
+Here, the transformed value is on the left and the untransformed value is on the
+right. I'd like to apply independent PWM settings to each half using the
+displayed value directly as the duty cycle. Finally, I'll use eight of the
+switches as binary inputs.
+
+One caveat here is that because the displays are multiplexed and I'm displaying
+different data on them, I won't be able to run any single seven-segment display
+at 100% duty cycle. I'll have to time slice the eight displays (this is what the
+factory demo does), effectively limiting each one to 12.5% duty cycle.
+
+The first thing I'll do is make a new demo, so I can keep the old one. I'll call
+it `manual_brightness.py`. I'll also want to split out the PWM implementation
+into its own library.
