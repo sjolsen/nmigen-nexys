@@ -15,5 +15,5 @@ class PWM(Elaboratable):
         counter = Signal(self.duty_cycle.width, reset=0)
         m.d.sync += counter.eq(counter + 1)
         m.d.comb += self.strobe.eq(counter == C(2**counter.width - 1, counter.width))
-        m.d.comb += self.output.eq(counter > self.duty_cycle)
+        m.d.comb += self.output.eq(counter < self.duty_cycle)
         return m

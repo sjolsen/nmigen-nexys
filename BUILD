@@ -27,6 +27,16 @@ py_test(
     ],
 )
 
+py_binary(
+    name = "display",
+    srcs = ["display.py"],
+    deps = [
+        ":bcd",
+        ":nexysa7100t",
+        ":pwm",
+    ],
+)
+
 py_library(
     name = "pwm",
     srcs = ["pwm.py"],
@@ -62,9 +72,19 @@ py_binary(
     name = "manual_brightness",
     srcs = ["manual_brightness.py"],
     deps = [
-        ":nexysa7100t",
         ":bcd",
-        ":pwm",
+        ":display",
+        ":nexysa7100t",
         ":square_fraction",
+    ],
+)
+
+py_test(
+    name = "manual_brightness_test",
+    srcs = ["manual_brightness_test.py"],
+    deps = [
+        requirement("six"),  # TODO: Fix this, needed by the VCD library
+        ":bcd",
+        ":manual_brightness",
     ],
 )

@@ -5,7 +5,7 @@ from nmigen.build import *
 class DigitLUT(Elaboratable):
 
     # 7-bit encoding of segments A-G, indexed by value
-    _DATA = [
+    TABLE = [
         0b0111111,
         0b0000110,
         0b1011011,
@@ -26,7 +26,7 @@ class DigitLUT(Elaboratable):
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
         with m.Switch(self.input):
-            for i, val in enumerate(self._DATA):
+            for i, val in enumerate(self.TABLE):
                 with m.Case(i):
                     m.d.comb += self.output.eq(val)
             with m.Case():
@@ -40,9 +40,9 @@ class BCDRenderer(Elaboratable):
         super().__init__()
         assert len(input) != 0
         self.input = input
-        self.start = Signal()
+        self.start = Signal(reset=0)
         self.output = [Signal(8) for _ in input]
-        self.done = Signal()
+        self.done = Signal(reset=0)
 
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
@@ -86,9 +86,9 @@ class BinToBCD(Elaboratable):
     def __init__(self, input: Signal, output: [Signal]):
         super().__init__()
         self.input = input
-        self.start = Signal()
+        self.start = Signal(reset=0)
         self.output = output
-        self.done = Signal()
+        self.done = Signal(reset=0)
 
     def elaborate(self, platform: Platform) -> Module:
         m = Module()

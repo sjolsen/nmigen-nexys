@@ -911,3 +911,16 @@ factory demo does), effectively limiting each one to 12.5% duty cycle.
 The first thing I'll do is make a new demo, so I can keep the old one. I'll call
 it `manual_brightness.py`. I'll also want to split out the PWM implementation
 into its own library.
+
+I went ahead and spent several hours implementing this without taking notes. It
+was a real pain to debug. On the bright side, I figured out how to get GTKWave
+working with Bazel test outputs. I also found out the real reason I wasn't
+getting the right PWM output: it wasn't that the anode output wasn't inverted
+(it was), but that my duty cycle logic was backwards. Also, you unfortunately
+don't get an error if you forget to assign a `.eq` expression to a domain --
+maybe you get a warning, but I didn't see it.
+
+Anyway, I got out of this what I wanted, which is a way to visualize the
+brightness curve. It looks okay, though the gamma function renders the output
+undetectable until the input is about 23. Maybe I'll solve that with a
+linearized region near zero, like sRGB does.
