@@ -68,7 +68,7 @@ class Demo(Elaboratable):
         clk_period = int(platform.default_clk_frequency)
         m.submodules.timer = timer = Timer(clk_period // 2)
         m.submodules.triangle = triangle = TriangleWave(10 * clk_period, 8)
-        m.submodules.square_fracion = sf = SquareFraction(triangle.output)
+        m.submodules.square_fraction = sf = SquareFraction(triangle.output)
         m.submodules.pwm = pwm = PWM(sf.output)
 
         segments = platform.request('display_7seg')
