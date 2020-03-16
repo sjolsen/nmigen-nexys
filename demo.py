@@ -1,8 +1,9 @@
-import itertools
+import math
 from nmigen import *
 from nmigen.build import *
 
 from nexysa7100t import NexysA7100TPlatform
+from lut import FunctionLUT
 from pwm import PWM
 from srgb import sRGBGammaLUT
 
@@ -32,17 +33,55 @@ class TriangleWave(Elaboratable):
         self.period = period
         self.precision = precision
         self.output = Signal(precision)
+        self.ascending = Signal()
 
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
         counter = Signal(range(self.period), reset=0)
         m.d.sync += counter.eq(counter + 1)
-        half_wave = counter[-1]
+        m.d.comb += self.ascending.eq(~counter[-1])
         high_bits = counter[-1 - self.precision : -1]
-        with m.If(half_wave == 0):
+        with m.If(self.ascending):
             m.d.comb += self.output.eq(high_bits)
         with m.Else():
             m.d.comb += self.output.eq(C(-1, len(high_bits)) - high_bits)
+        return m
+
+
+class PositiveSineWave(Elaboratable):
+    
+    def __init__(self, twave: TriangleWave):
+        super().__init__()
+        self.twave = twave
+        self.output = Signal(twave.precision)
+
+    @classmethod
+    def _iclamp(cls, x: int, xmin: int, xmax: int) -> int:
+        x = max(x, xmin)
+        x = min(x, xmax)
+        return x
+
+    @classmethod
+    def _qwave_unbound(cls, xbits: int, ybits: int, x: int) -> int:
+        u = (math.pi * float(x)) / float(2**(xbits + 1))  # x/2**xbits * pi/2
+        v = math.sin(u)
+        y = int(round(v * float(2**ybits)))
+        y = cls._iclamp(y, 0, 2**ybits - 1)
+        return y
+
+    def elaborate(self, platform: Platform) -> Module:
+        m = Module()
+        x = Signal(self.twave.output.width - 1)  # Two quarter-waves per half-wave
+        y = Signal(self.output.width - 1)  # Output range is doubled by mirroring
+        qwave = lambda xval: self._qwave_unbound(x.width, y.width, xval)
+        m.submodules.qlut = qlut = FunctionLUT(qwave, x, y)
+        xrev = Signal()
+        yrev = Signal()
+        m.d.comb += xrev.eq(self.twave.output[-1])
+        m.d.comb += yrev.eq(~self.twave.ascending)
+        m.d.comb += x.eq(Mux(xrev, C(-1, x.width) - self.twave.output[:-1], self.twave.output[:-1]))
+        omid = C(2**(self.output.width - 1), self.output.width)
+        m.d.comb += self.output.eq(Mux(yrev, omid - 1 - y, omid + y))
         return m
 
 
@@ -54,7 +93,8 @@ class Demo(Elaboratable):
         clk_period = int(platform.default_clk_frequency)
         m.submodules.timer = timer = Timer(clk_period // 2)
         m.submodules.triangle = triangle = TriangleWave(10 * clk_period, 8)
-        m.submodules.gamma = gamma = sRGBGammaLUT(triangle.output, Signal(12))
+        m.submodules.sin = sin = PositiveSineWave(triangle)
+        m.submodules.gamma = gamma = sRGBGammaLUT(sin.output, Signal(12))
         m.submodules.pwm = pwm = PWM(gamma.output)
 
         segments = platform.request('display_7seg')
