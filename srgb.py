@@ -5,6 +5,7 @@ from lut import FunctionLUT, Rasterize
 
 
 def sRGBGamma(u: float) -> float:
+    # https://en.wikipedia.org/wiki/SRGB
     if u <= 0.04045:
         return (25.0 * u) / 323.0
     else:
@@ -13,6 +14,6 @@ def sRGBGamma(u: float) -> float:
 
 def sRGBGammaLUT(input: Signal, output: Signal) -> FunctionLUT:
     gamma = Rasterize(
-        sRGBGamma, umin=0.0, umax=1.0, xbits=input.width,
-        vmin=0.0, vmax=1.0, ybits=output.width)
+        sRGBGamma, umin=0.0, umax=1.0, xshape=input.shape(),
+        vmin=0.0, vmax=1.0, yshape=output.shape())
     return FunctionLUT(gamma, input, output)

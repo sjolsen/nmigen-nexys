@@ -60,8 +60,8 @@ class PositiveSineWave(Elaboratable):
         x = Signal(self.twave.output.width - 1)  # Two quarter-waves per half-wave
         y = Signal(self.output.width - 1)  # Output range is doubled by mirroring
         qwave = Rasterize(
-            math.sin, umin=0.0, umax=math.pi / 2.0, xbits=x.width,
-            vmin=0.0, vmax=1.0, ybits=y.width)
+            math.sin, umin=0.0, umax=math.pi / 2.0, xshape=x.shape(),
+            vmin=0.0, vmax=1.0, yshape=y.shape())
         m.submodules.qlut = qlut = FunctionLUT(qwave, x, y)
         xrev = Signal()
         yrev = Signal()
