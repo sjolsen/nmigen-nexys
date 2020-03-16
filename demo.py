@@ -25,13 +25,13 @@ class Demo(Elaboratable):
         anodes = platform.request('display_7seg_an')
         m.d.comb += anodes.eq(Repl(pwm.output, 8))
 
-        m.submodules.shift_timer = shift_timer = UpTimer(clk_period // 2)
-        shift_register = Signal(8, reset=0b11110000)
+        m.submodules.shift_timer = shift_timer = UpTimer(clk_period // 10)
+        shift_register = Signal(6, reset=0b111100)
         with m.If(shift_timer.triggered):
             m.d.sync += shift_register.eq(
-                shift_register << 1 | shift_register >> 7)
+                shift_register << 1 | shift_register >> 5)
 
-        m.d.comb += segments.eq(shift_register)
+        m.d.comb += segments.eq(Cat(shift_register, C(0, 2)))
 
         return m
 
