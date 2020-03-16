@@ -55,12 +55,6 @@ py_library(
     deps = [requirement("nmigen")],
 )
 
-py_library(
-    name = "srgb",
-    srcs = ["srgb.py"],
-    deps = [":lut"],
-)
-
 py_test(
     name = "square_fraction_test",
     srcs = ["square_fraction_test.py"],
@@ -68,6 +62,18 @@ py_test(
         requirement("six"),  # TODO: Fix this, needed by the VCD library
         ":square_fraction",
     ],
+)
+
+py_library(
+    name = "srgb",
+    srcs = ["srgb.py"],
+    deps = [":lut"],
+)
+
+py_library(
+    name = "timer",
+    srcs = ["timer.py"],
+    deps = [requirement("nmigen")],
 )
 
 py_binary(
@@ -78,6 +84,7 @@ py_binary(
         ":lut",
         ":pwm",
         ":srgb",
+        ":timer",
     ],
 )
 

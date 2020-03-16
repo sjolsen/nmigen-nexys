@@ -12,6 +12,10 @@ def ShapeMax(s: Shape) -> int:
     return 2**(s.width - 1) - 1 if s.signed else 2**s.width - 1
 
 
+def ShapeMid(s: Shape) -> int:
+    return 0 if s.signed else 2**(s.width - 1)
+
+
 def Clamp(x: float, shape: Shape) -> int:
     y = int(round(x))
     y = max(y, ShapeMin(shape))

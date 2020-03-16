@@ -3,73 +3,38 @@ from nmigen import *
 from nmigen.build import *
 
 from nexysa7100t import NexysA7100TPlatform
-from lut import FunctionLUT, Rasterize
+from lut import FunctionLUT, Rasterize, ShapeMid
 from pwm import PWM
 from srgb import sRGBGammaLUT
+from timer import UpTimer
 
 
-class Timer(Elaboratable):
-
-    def __init__(self, period: int):
-        super().__init__()
-        self.period = period
-        self.triggered = Signal()
-
-    def elaborate(self, platform: Platform) -> Module:
-        m = Module()
-        counter = Signal(range(self.period), reset=self.period - 1)
-        m.d.comb += self.triggered.eq(counter == 0)
-        with m.If(counter == 0):
-            m.d.sync += counter.eq(counter.reset)
-        with m.Else():
-            m.d.sync += counter.eq(counter - 1)
-        return m
-
-
-class TriangleWave(Elaboratable):
-
-    def __init__(self, period: int, precision: int):
-        super().__init__()
-        self.period = period
-        self.precision = precision
-        self.output = Signal(precision)
-        self.ascending = Signal()
-
-    def elaborate(self, platform: Platform) -> Module:
-        m = Module()
-        counter = Signal(range(self.period), reset=0)
-        m.d.sync += counter.eq(counter + 1)
-        m.d.comb += self.ascending.eq(~counter[-1])
-        high_bits = counter[-1 - self.precision : -1]
-        with m.If(self.ascending):
-            m.d.comb += self.output.eq(high_bits)
-        with m.Else():
-            m.d.comb += self.output.eq(C(-1, len(high_bits)) - high_bits)
-        return m
-
-
-class PositiveSineWave(Elaboratable):
+class SineLUT(Elaboratable):
     
-    def __init__(self, twave: TriangleWave):
+    def __init__(self, input: Signal, output: Signal):
         super().__init__()
-        self.twave = twave
-        self.output = Signal(twave.precision)
+        self.input = input
+        self.output = output
 
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
-        x = Signal(self.twave.output.width - 1)  # Two quarter-waves per half-wave
+        x = Signal(self.input.width - 2)  # Four (2**2) quarter-waves
         y = Signal(self.output.width - 1)  # Output range is doubled by mirroring
         qwave = Rasterize(
             math.sin, umin=0.0, umax=math.pi / 2.0, xshape=x.shape(),
             vmin=0.0, vmax=1.0, yshape=y.shape())
-        m.submodules.qlut = qlut = FunctionLUT(qwave, x, y)
-        xrev = Signal()
-        yrev = Signal()
-        m.d.comb += xrev.eq(self.twave.output[-1])
-        m.d.comb += yrev.eq(~self.twave.ascending)
-        m.d.comb += x.eq(Mux(xrev, C(-1, x.width) - self.twave.output[:-1], self.twave.output[:-1]))
-        omid = C(2**(self.output.width - 1), self.output.width)
-        m.d.comb += self.output.eq(Mux(yrev, omid - 1 - y, omid + y))
+        m.submodules.qlut = FunctionLUT(qwave, x, y)
+        hparity = self.input[-2]
+        with m.If(hparity):
+            m.d.comb += x.eq(-1 - self.input[:-2])  # Implicit mod pi/2
+        with m.Else():
+            m.d.comb += x.eq(self.input[:-2])
+        vparity = self.input[-1]  # Works for both signed and unsigned
+        vmid = ShapeMid(self.output.shape())
+        with m.If(vparity):
+            m.d.comb += self.output.eq(vmid - 1 - y)
+        with m.Else():
+            m.d.comb += self.output.eq(vmid + y)
         return m
 
 
@@ -79,9 +44,9 @@ class Demo(Elaboratable):
         m = Module()
 
         clk_period = int(platform.default_clk_frequency)
-        m.submodules.timer = timer = Timer(clk_period // 2)
-        m.submodules.triangle = triangle = TriangleWave(10 * clk_period, 8)
-        m.submodules.sin = sin = PositiveSineWave(triangle)
+        m.submodules.sin_timer = sin_timer = UpTimer(clk_period * 10)
+        m.submodules.sin = sin = SineLUT(Signal(8), Signal(8))
+        m.d.comb += sin.input.eq(sin_timer.counter[-8:])
         m.submodules.gamma = gamma = sRGBGammaLUT(sin.output, Signal(12))
         m.submodules.pwm = pwm = PWM(gamma.output)
 
@@ -89,8 +54,9 @@ class Demo(Elaboratable):
         anodes = platform.request('display_7seg_an')
         m.d.comb += anodes.eq(Repl(pwm.output, 8))
 
+        m.submodules.shift_timer = shift_timer = UpTimer(clk_period // 2)
         shift_register = Signal(8, reset=0b11110000)
-        with m.If(timer.triggered):
+        with m.If(shift_timer.triggered):
             m.d.sync += shift_register.eq(
                 shift_register << 1 | shift_register >> 7)
 
