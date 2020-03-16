@@ -3,7 +3,7 @@ from nmigen import *
 from nmigen.build import *
 
 from nexysa7100t import NexysA7100TPlatform
-from lut import FunctionLUT
+from lut import FunctionLUT, Rasterize
 from pwm import PWM
 from srgb import sRGBGammaLUT
 
@@ -55,25 +55,13 @@ class PositiveSineWave(Elaboratable):
         self.twave = twave
         self.output = Signal(twave.precision)
 
-    @classmethod
-    def _iclamp(cls, x: int, xmin: int, xmax: int) -> int:
-        x = max(x, xmin)
-        x = min(x, xmax)
-        return x
-
-    @classmethod
-    def _qwave_unbound(cls, xbits: int, ybits: int, x: int) -> int:
-        u = (math.pi * float(x)) / float(2**(xbits + 1))  # x/2**xbits * pi/2
-        v = math.sin(u)
-        y = int(round(v * float(2**ybits)))
-        y = cls._iclamp(y, 0, 2**ybits - 1)
-        return y
-
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
         x = Signal(self.twave.output.width - 1)  # Two quarter-waves per half-wave
         y = Signal(self.output.width - 1)  # Output range is doubled by mirroring
-        qwave = lambda xval: self._qwave_unbound(x.width, y.width, xval)
+        qwave = Rasterize(
+            math.sin, umin=0.0, umax=math.pi / 2.0, xbits=x.width,
+            vmin=0.0, vmax=1.0, ybits=y.width)
         m.submodules.qlut = qlut = FunctionLUT(qwave, x, y)
         xrev = Signal()
         yrev = Signal()

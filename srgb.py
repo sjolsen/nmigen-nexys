@@ -1,7 +1,7 @@
 from nmigen import *
 from nmigen.build import *
 
-from lut import FunctionLUT
+from lut import FunctionLUT, Rasterize
 
 
 def sRGBGamma(u: float) -> float:
@@ -11,13 +11,8 @@ def sRGBGamma(u: float) -> float:
         return ((200.0 * u + 11.0) / 211.0)**(12.0 / 5.0)
 
 
-def sRGBGammaInt(xbits: int, ybits: int, x: int) -> int:
-    u = float(x) / float(2**xbits)
-    v = sRGBGamma(u)
-    y = int(round(v * float(2**ybits)))
-    return y
-
-
 def sRGBGammaLUT(input: Signal, output: Signal) -> FunctionLUT:
-    f = lambda x: sRGBGammaInt(input.width, output.width, x)
-    return FunctionLUT(f, input, output)
+    gamma = Rasterize(
+        sRGBGamma, umin=0.0, umax=1.0, xbits=input.width,
+        vmin=0.0, vmax=1.0, ybits=output.width)
+    return FunctionLUT(gamma, input, output)

@@ -1,3 +1,4 @@
+import functools
 from nmigen import *
 from nmigen.build import *
 from typing import Callable
@@ -24,3 +25,42 @@ class FunctionLUT(Elaboratable):
                 with m.Case(x):
                     m.d.comb += self.output.eq(y)
         return m
+
+
+def Rasterize(f: Callable[[float], float],
+              umin: float, umax: float, xbits: int,
+              vmin: float, vmax: float, ybits: int) -> Callable[[int], int]:
+    @functools.wraps(f)
+    def rasterized(x: int) -> int:
+        # u(x) = m * x + b
+        # u(0) = umin
+        # u(2**xbits - 1) = umax
+        # umin = m * 0 + b
+        #   => b = umin
+        # umax = m * (2**xbits - 1) + b
+        #   => m = (umax - umin) / (2**xbits - 1)
+        # u(x) = x * (umax - umin) / (2**xbits - 1) + umin
+        u = float(x * (umax - umin)) / float((2**xbits - 1) + umin)
+        v = f(u)
+        # y(v) = m * v + b
+        # y(vmin) = 0
+        # y(vmax) = 2**ybits - 1
+        # 0 = m * vmin + b
+        #   => b = -m * vmin
+        # 2**ybits - 1 = m * vmax + b
+        #   => b = 2**ybits - 1 - m * vmax
+        # -m * vmin = 2**ybits - 1 - m * vmax
+        #   => m * vmax - m * vmin = 2**ybits - 1
+        #   => m * (vmax - vmin) = 2**ybits - 1
+        #   => m = (2**ybits - 1) / (vmax - vmin)
+        # b = -m * vmin
+        #   => y(v) = m * v - m * vmin
+        #   => y(v) = (v - vmin) * (2**ybits - 1) / (vmax - vmin)
+        y = float(v - vmin) * float(2**ybits - 1) / float(vmax - vmin)
+        # Clamp to range of y so floating-point imprecision can't cause wrap-
+        # around
+        y = int(round(y))
+        y = max(y, 0)
+        y = min(y, 2**ybits - 1)
+        return y
+    return rasterized

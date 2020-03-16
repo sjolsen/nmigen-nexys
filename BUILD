@@ -75,6 +75,7 @@ py_binary(
     srcs = ["demo.py"],
     deps = [
         ":nexysa7100t",
+        ":lut",
         ":pwm",
         ":srgb",
     ],
