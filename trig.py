@@ -40,3 +40,18 @@ class SineLUT(Elaboratable):
             with m.Else():
                 m.d.comb += self.output.eq(vmid + y)
         return m
+
+
+class CosineLUT(Elaboratable):
+    
+    def __init__(self, input: Signal, output: Signal):
+        super().__init__()
+        self.input = input
+        self.output = output
+
+    def elaborate(self, platform: Platform) -> Module:
+        m = Module()
+        shifted = Signal(self.input.shape())
+        m.submodules.sin = SineLUT(shifted, self.output)
+        m.d.comb += shifted.eq(self.input + 2**(self.input.width - 2))
+        return m
