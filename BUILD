@@ -44,6 +44,21 @@ py_library(
 )
 
 py_library(
+    name = "trig",
+    srcs = ["trig.py"],
+    deps = [":lut"],
+)
+
+py_test(
+    name = "trig_test",
+    srcs = ["trig_test.py"],
+    deps = [
+        requirement("six"),  # TODO: Fix this, needed by the VCD library
+        ":trig",
+    ],
+)
+
+py_library(
     name = "pwm",
     srcs = ["pwm.py"],
     deps = [requirement("nmigen")],
@@ -81,7 +96,7 @@ py_binary(
     srcs = ["demo.py"],
     deps = [
         ":nexysa7100t",
-        ":lut",
+        ":trig",
         ":pwm",
         ":srgb",
         ":timer",

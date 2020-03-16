@@ -36,9 +36,9 @@ def Rasterize(f: Callable[[float], float],
               umin: float, umax: float, xshape: Shape,
               vmin: float, vmax: float, yshape: Shape) -> Callable[[int], int]:
     u_x = LinearTransformation(
-        imin=ShapeMin(xshape), imax=ShapeMax(xshape), omin=umin, omax=umax)
+        imin=ShapeMin(xshape), imax=ShapeMax(xshape) + 1, omin=umin, omax=umax)
     y_v = LinearTransformation(
-        imin=vmin, imax=vmax, omin=ShapeMin(yshape), omax=ShapeMax(yshape))
+        imin=vmin, imax=vmax, omin=ShapeMin(yshape), omax=ShapeMax(yshape) + 1)
     @functools.wraps(f)
     def rasterized(x: int) -> int:
         u = u_x(float(x))
