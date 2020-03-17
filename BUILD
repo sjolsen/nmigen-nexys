@@ -5,6 +5,7 @@ load(
     "py_library",
     "py_test",
 )
+package(default_visibility = ["//visibility:public"])
 
 py_binary(
     name = "nexysa7100t",
