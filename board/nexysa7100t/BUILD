@@ -1,14 +1,14 @@
 load("@pip_deps//:requirements.bzl", "requirement")
 load(
     "@rules_python//python:defs.bzl",
-    "py_binary",
     "py_library",
     "py_test",
 )
+load("//core:top.bzl", "nmigen_design")
 
 package(default_visibility = ["//visibility:public"])
 
-py_binary(
+nmigen_design(
     name = "demo",
     srcs = ["demo.py"],
     deps = [
@@ -16,6 +16,7 @@ py_binary(
         "//color:srgb",
         "//core:pwm",
         "//core:timer",
+        "//core:top",
         "//math:trig",
         requirement("nmigen"),
     ],
@@ -31,13 +32,14 @@ py_library(
     ],
 )
 
-py_binary(
+nmigen_design(
     name = "manual_brightness_demo",
     srcs = ["manual_brightness_demo.py"],
     deps = [
         ":manual_brightness",
         ":nexysa7100t",
         "//color:srgb",
+        "//core:top",
         "//display:seven_segment",
         "//math:bcd",
         requirement("nmigen"),
@@ -57,28 +59,33 @@ py_test(
     ],
 )
 
-py_binary(
+nmigen_design(
     name = "nexysa7100t",
     srcs = ["nexysa7100t.py"],
-    deps = [requirement("nmigen_boards")],
+    deps = [
+        "//core:top",
+        requirement("nmigen_boards"),
+    ],
 )
 
-py_binary(
+nmigen_design(
     name = "pmod_8ld_demo",
     srcs = ["pmod_8ld_demo.py"],
     deps = [
         ":nexysa7100t",
         "//core:timer",
+        "//core:top",
         "//pmod:pmod_8ld",
         requirement("nmigen"),
     ],
 )
 
-py_binary(
+nmigen_design(
     name = "seven_segment_demo",
     srcs = ["seven_segment_demo.py"],
     deps = [
         ":nexysa7100t",
+        "//core:top",
         "//display:seven_segment",
         requirement("nmigen"),
     ],

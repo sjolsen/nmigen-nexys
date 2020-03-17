@@ -3,6 +3,7 @@ from nmigen.build import *
 
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
 from nmigen_nexys.core import timer as timer_module
+from nmigen_nexys.core import top
 from nmigen_nexys.pmod import pmod_8ld
 
 
@@ -37,4 +38,4 @@ if __name__ == "__main__":
         pmod_8ld.Pmod8LDResource(0, conn=('pmod', 0)),
         pmod_8ld.Pmod8LDResource(1, conn=('pmod', 1)),
     ])
-    platform.build(Demo(), do_program=True)
+    top.main(platform, Demo())

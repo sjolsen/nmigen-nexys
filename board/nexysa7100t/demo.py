@@ -5,6 +5,7 @@ from nmigen_nexys.board.nexysa7100t import nexysa7100t
 from nmigen_nexys.color import srgb
 from nmigen_nexys.core import pwm as pwm_module
 from nmigen_nexys.core import timer
+from nmigen_nexys.core import top
 from nmigen_nexys.math import trig
 
 
@@ -37,4 +38,4 @@ class Demo(Elaboratable):
 
 
 if __name__ == "__main__":
-    nexysa7100t.NexysA7100TPlatform().build(Demo(), do_program=True)
+    top.main(nexysa7100t.NexysA7100TPlatform(), Demo())

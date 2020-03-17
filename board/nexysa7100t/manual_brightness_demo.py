@@ -5,6 +5,7 @@ from nmigen.hdl.rec import *
 from nmigen_nexys.board.nexysa7100t import manual_brightness
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
 from nmigen_nexys.color import srgb
+from nmigen_nexys.core import top
 from nmigen_nexys.display import seven_segment
 from nmigen_nexys.math import bcd
 
@@ -44,4 +45,4 @@ class ManualBrightness(Elaboratable):
 
 
 if __name__ == "__main__":
-    nexysa7100t.NexysA7100TPlatform().build(ManualBrightness(), do_program=True)
+    top.main(nexysa7100t.NexysA7100TPlatform(), ManualBrightness())

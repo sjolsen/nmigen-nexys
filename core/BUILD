@@ -16,6 +16,16 @@ py_library(
 )
 
 py_library(
+    name = "top",
+    srcs = ["top.py"],
+    deps = [
+        requirement("absl-py"),
+        requirement("nmigen"),
+        requirement("six"),  # TODO: Fix this, needed by absl
+    ],
+)
+
+py_library(
     name = "util",
     srcs = ["util.py"],
     deps = [requirement("nmigen")],

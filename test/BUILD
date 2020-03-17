@@ -3,6 +3,11 @@ load("@rules_python//python:defs.bzl", "py_library")
 
 package(default_visibility = ["//visibility:public"])
 
+filegroup(
+    name = "elaboration_test",
+    srcs = ["elaboration_test.py"],
+)
+
 py_library(
     name = "util",
     srcs = ["util.py"],
