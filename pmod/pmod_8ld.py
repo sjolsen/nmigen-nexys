@@ -1,7 +1,7 @@
+from typing import Tuple
+
 from nmigen import *
 from nmigen.build import *
-
-from typing import Tuple
 
 
 def Pmod8LDResource(n: int, conn: Tuple[str, int]) -> Resource:

@@ -1,16 +1,16 @@
-import six
 import unittest
 
 from nmigen import *
 from nmigen.back.pysim import *
-from square_fraction import SquareFraction
+
+from nmigen_nexys.math import square_fraction
 
 
 class SquareFractionTest(unittest.TestCase):
 
     def _run_test(self, input: int, expected: int):
         m = Module()
-        m.submodules.sf = sf = SquareFraction(Signal(8))
+        m.submodules.sf = sf = square_fraction.SquareFraction(Signal(8))
         sim = Simulator(m)
 
         def process():

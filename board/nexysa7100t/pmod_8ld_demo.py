@@ -1,9 +1,9 @@
 from nmigen import *
 from nmigen.build import *
 
-from nexysa7100t import NexysA7100TPlatform
-from pmod.pmod_8ld import Pmod8LDResource
-from timer import UpTimer
+from nmigen_nexys.board.nexysa7100t import nexysa7100t
+from nmigen_nexys.core import timer as timer_module
+from nmigen_nexys.pmod import pmod_8ld
 
 
 class Demo(Elaboratable):
@@ -11,7 +11,7 @@ class Demo(Elaboratable):
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
         clk_period = int(platform.default_clk_frequency)
-        m.submodules.timer = timer = UpTimer(clk_period // 10)
+        m.submodules.timer = timer = timer_module.UpTimer(clk_period // 10)
 
         pmod0 = platform.request('pmod_8ld', 0)
         pmod1 = platform.request('pmod_8ld', 1)
@@ -32,9 +32,9 @@ class Demo(Elaboratable):
 
 
 if __name__ == "__main__":
-    platform = NexysA7100TPlatform()
+    platform = nexysa7100t.NexysA7100TPlatform()
     platform.add_resources([
-        Pmod8LDResource(0, conn=('pmod', 0)),
-        Pmod8LDResource(1, conn=('pmod', 1)),
+        pmod_8ld.Pmod8LDResource(0, conn=('pmod', 0)),
+        pmod_8ld.Pmod8LDResource(1, conn=('pmod', 1)),
     ])
     platform.build(Demo(), do_program=True)

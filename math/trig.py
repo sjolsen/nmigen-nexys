@@ -1,8 +1,11 @@
 import math
+
 from nmigen import *
 from nmigen.build import *
 
-from lut import FunctionLUT, Rasterize, ShapeMin, ShapeMax, ShapeMid
+from nmigen_nexys.core import util
+from nmigen_nexys.math import lut
+
 
 class SineLUT(Elaboratable):
     
@@ -15,10 +18,10 @@ class SineLUT(Elaboratable):
         m = Module()
         x = Signal(self.input.width - 2)  # Four (2**2) quarter-waves
         y = Signal(self.output.width - 1)  # Output range is doubled by mirroring
-        qwave = Rasterize(
+        qwave = lut.Rasterize(
             math.sin, umin=0.0, umax=math.pi / 2.0, xshape=x.shape(),
             vmin=0.0, vmax=1.0, yshape=y.shape())
-        m.submodules.qlut = FunctionLUT(qwave, x, y)
+        m.submodules.qlut = lut.FunctionLUT(qwave, x, y)
         hparity = self.input[-2]
         with m.If(hparity):
             m.d.comb += x.eq(-self.input[:-2])  # Implicit mod pi/2
@@ -28,15 +31,15 @@ class SineLUT(Elaboratable):
         # the peaks and troughs. Handle that outside the LUT.
         xdiscontinuity = hparity & (self.input[:-2] == 0)
         vparity = self.input[-1]  # Works for both signed and unsigned
-        vmid = ShapeMid(self.output.shape())
+        vmid = util.ShapeMid(self.output.shape())
         with m.If(vparity):
             with m.If(xdiscontinuity):
-                m.d.comb += self.output.eq(ShapeMin(self.output.shape()))
+                m.d.comb += self.output.eq(util.ShapeMin(self.output.shape()))
             with m.Else():
                 m.d.comb += self.output.eq(vmid - y)
         with m.Else():
             with m.If(xdiscontinuity):
-                m.d.comb += self.output.eq(ShapeMax(self.output.shape()))
+                m.d.comb += self.output.eq(util.ShapeMax(self.output.shape()))
             with m.Else():
                 m.d.comb += self.output.eq(vmid + y)
         return m

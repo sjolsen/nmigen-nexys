@@ -1,56 +1,35 @@
-import six
-
-from nmigen import *
-from nmigen.back.pysim import *
-import os
 from typing import List
 import unittest
 
-from bcd import DigitLUT
-from manual_brightness import ConversionPipeline
+from nmigen import *
+from nmigen.back.pysim import *
+
+from nmigen_nexys.board.nexysa7100t import manual_brightness
+from nmigen_nexys.core import util
+from nmigen_nexys.display import seven_segment
+from nmigen_nexys.test import util as test_util
 
 
 BLANK = 0
-ZERO = DigitLUT.TABLE[0]
-ONE = DigitLUT.TABLE[1]
-TWO = DigitLUT.TABLE[2]
-THREE = DigitLUT.TABLE[3]
-FOUR = DigitLUT.TABLE[4]
-FIVE = DigitLUT.TABLE[5]
-SIX = DigitLUT.TABLE[6]
-SEVEN = DigitLUT.TABLE[7]
-EIGHT = DigitLUT.TABLE[8]
-NINE = DigitLUT.TABLE[9]
-
-
-def YieldList(l, result):
-    for x in l:
-        y = yield x
-        result.append(y)
-
-
-def WaitDone(done):
-    while True:
-        x = yield done
-        if x:
-            break
-        yield
-
-
-def Flatten(m: Module, input: List[Signal]) -> Signal:
-    cat = Cat(*input)
-    flat = Signal(cat.shape())
-    m.d.comb += flat.eq(cat)
-    return flat
+ZERO = seven_segment.DigitLUT.TABLE[0]
+ONE = seven_segment.DigitLUT.TABLE[1]
+TWO = seven_segment.DigitLUT.TABLE[2]
+THREE = seven_segment.DigitLUT.TABLE[3]
+FOUR = seven_segment.DigitLUT.TABLE[4]
+FIVE = seven_segment.DigitLUT.TABLE[5]
+SIX = seven_segment.DigitLUT.TABLE[6]
+SEVEN = seven_segment.DigitLUT.TABLE[7]
+EIGHT = seven_segment.DigitLUT.TABLE[8]
+NINE = seven_segment.DigitLUT.TABLE[9]
 
 
 class ConversionPipelineTest(unittest.TestCase):
 
     def test_multiple(self):
         m = Module()
-        m.submodules.conv = conv = ConversionPipeline(Signal(8), Signal(8))
-        rdisp_flat = Flatten(m, conv.rdisp)
-        ldisp_flat = Flatten(m, conv.ldisp)
+        m.submodules.conv = conv = manual_brightness.ConversionPipeline(Signal(8), Signal(8))
+        rdisp_flat = util.Flatten(m, conv.rdisp)
+        ldisp_flat = util.Flatten(m, conv.ldisp)
         sim = Simulator(m)
         sim.add_clock(1e-8)  # 100 MHz
 
@@ -58,11 +37,11 @@ class ConversionPipelineTest(unittest.TestCase):
             yield conv.rval.eq(rval)
             yield conv.lval.eq(2 * rval)
             yield  # Let conv automatically detect the update
-            yield from WaitDone(conv.done)
+            yield from test_util.WaitDone(conv.done)
             actual_rdisp = []
-            yield from YieldList(conv.rdisp, actual_rdisp)
+            yield from test_util.YieldList(conv.rdisp, actual_rdisp)
             actual_ldisp = []
-            yield from YieldList(conv.ldisp, actual_ldisp)
+            yield from test_util.YieldList(conv.ldisp, actual_ldisp)
             print(f'Input: {rval}')
             print(f'Expected: {expected_rdisp}, {expected_ldisp}')
             print(f'Actual: {actual_rdisp}, {actual_ldisp}')
@@ -86,18 +65,10 @@ class ConversionPipelineTest(unittest.TestCase):
             yield Delay(10_000e-8)
             self.fail('Timed out after 10 kcycles')
 
-        def outfile(basename):
-            outdir = os.getenv('TEST_UNDECLARED_OUTPUTS_DIR')
-            if outdir is None:
-                return basename
-            else:
-                return os.path.join(outdir, basename)
-
         sim.add_process(timeout)
         sim.add_sync_process(convert)
-        with sim.write_vcd(
-            vcd_file=outfile("test.vcd"),
-            gtkw_file=outfile("test.gtkw"),
+        with test_util.BazelWriteVCD(
+            sim, vcd_file="test.vcd", gtkw_file="test.gtkw",
             traces=[conv.rval, rdisp_flat, ldisp_flat]):
             sim.run()
 

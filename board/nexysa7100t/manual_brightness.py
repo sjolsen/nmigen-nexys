@@ -2,10 +2,8 @@ from nmigen import *
 from nmigen.build import *
 from nmigen.hdl.rec import *
 
-from bcd import BCDRenderer, BinToBCD
-from display import DisplayBank, DisplayMultiplexer, SingleDisplayValue
-from nexysa7100t import NexysA7100TPlatform
-from srgb import sRGBGammaLUT
+from nmigen_nexys.display import seven_segment
+from nmigen_nexys.math import bcd
 
 
 class ConversionPipeline(Elaboratable):
@@ -21,10 +19,10 @@ class ConversionPipeline(Elaboratable):
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
         # Intantiate the BCD pipeline
-        m.submodules.b2d = b2d = BinToBCD(
+        m.submodules.b2d = b2d = bcd.BinToBCD(
             input=Signal(8),
             output=[Signal(4) for _ in range(4)])
-        m.submodules.bcdr = bcdr = BCDRenderer(b2d.output)
+        m.submodules.bcdr = bcdr = seven_segment.BCDRenderer(b2d.output)
         m.d.comb += bcdr.start.eq(b2d.done)
         # Set up change detection
         last_input = Signal(17, reset=2**16)  # Poison on reset
@@ -55,41 +53,3 @@ class ConversionPipeline(Elaboratable):
                 m.d.sync += self.done.eq(0)
                 m.next = 'IDLE'
         return m
-
-
-class ManualBrightness(Elaboratable):
-
-    def elaborate(self, platform: Platform) -> Module:
-        m = Module()
-        # Compute left and right binary values using the switches    
-        switches = [platform.request('switch', i) for i in range(8)]
-        rval_meta = Signal(8)
-        m.d.sync += rval_meta.eq(Cat(*switches))
-        rval = Signal(8)
-        m.d.sync += rval.eq(rval_meta)
-        m.submodules.gamma = gamma = sRGBGammaLUT(input=rval, output=Signal(8))
-        lval = gamma.output
-        # Display raw binary on row LEDs for debugging
-        rleds = Cat(*[platform.request('led', i) for i in range(8)])
-        lleds = Cat(*[platform.request('led', i) for i in range(8, 16)])
-        m.d.comb += rleds.eq(rval)
-        m.d.comb += lleds.eq(lval)        
-        # Set up the BCD conversion pipeline
-        m.submodules.conv = conv = ConversionPipeline(rval, lval)
-        rdispval = [SingleDisplayValue(segments=disp, duty_cycle=rval) for disp in conv.rdisp]
-        ldispval = [SingleDisplayValue(segments=disp, duty_cycle=lval) for disp in conv.ldisp]
-        # Display the output
-        segments = platform.request('display_7seg')
-        anodes = platform.request('display_7seg_an')
-        display = DisplayBank(segments=Signal(8), anodes=Signal(8))
-        m.d.comb += segments.eq(display.segments)
-        m.d.comb += anodes.eq(display.anodes)
-        m.submodules.dispmux = DisplayMultiplexer(
-            inputs=Array(rdispval + ldispval),
-            output=display)
-
-        return m
-
-
-if __name__ == "__main__":
-    NexysA7100TPlatform().build(ManualBrightness(), do_program=True)

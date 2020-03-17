@@ -1,14 +1,14 @@
-import six
-
 import abc
 import math
-from nmigen import *
-from nmigen.back.pysim import *
 from typing import Callable
 import unittest
 
-from lut import LinearTransformation, ShapeMin, ShapeMax
-from trig import CosineLUT, SineLUT
+from nmigen import *
+from nmigen.back.pysim import *
+
+from nmigen_nexys.core import util
+from nmigen_nexys.math import lut
+from nmigen_nexys.math import trig
 
 
 class SinusoidTestBase(abc.ABC):
@@ -27,15 +27,15 @@ class SinusoidTestBase(abc.ABC):
         sim = Simulator(m)
 
         if xshape.signed:
-            u_x = LinearTransformation(
-                imin=ShapeMin(xshape), imax=ShapeMax(xshape) + 1,
+            u_x = lut.LinearTransformation(
+                imin=util.ShapeMin(xshape), imax=util.ShapeMax(xshape) + 1,
                 omin=-math.pi, omax=math.pi)
         else:
-            u_x = LinearTransformation(
-                imin=ShapeMin(xshape), imax=ShapeMax(xshape) + 1,
+            u_x = lut.LinearTransformation(
+                imin=util.ShapeMin(xshape), imax=util.ShapeMax(xshape) + 1,
                 omin=0.0, omax=2.0 * math.pi)
-        v_y = LinearTransformation(
-            imin=ShapeMin(yshape), imax=ShapeMax(yshape) + 1,
+        v_y = lut.LinearTransformation(
+            imin=util.ShapeMin(yshape), imax=util.ShapeMax(yshape) + 1,
             omin=-1.0, omax=1.0)
 
         y_precision = 2.0 / 2**yshape.width
@@ -56,7 +56,7 @@ class SinusoidTestBase(abc.ABC):
                 raise
 
         def process():
-            for x in range(ShapeMin(xshape), ShapeMax(xshape) + 1):
+            for x in range(util.ShapeMin(xshape), util.ShapeMax(xshape) + 1):
                 with self.subTest(x=x):
                     yield from test_one(x)
 
@@ -78,7 +78,7 @@ class SineLUTTest(SinusoidTestBase, unittest.TestCase):
 
     @property
     def lut_class(self) -> type:
-        return SineLUT
+        return trig.SineLUT
 
 
 class CosineLUTTest(SinusoidTestBase, unittest.TestCase):
@@ -89,7 +89,7 @@ class CosineLUTTest(SinusoidTestBase, unittest.TestCase):
 
     @property
     def lut_class(self) -> type:
-        return CosineLUT
+        return trig.CosineLUT
 
 
 if __name__ == '__main__':
