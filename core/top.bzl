@@ -10,8 +10,7 @@ def nmigen_design(name=None, *args, **kwargs):
         name = name,
         **kwargs
     )
-    # TODO: elaboration_test.py needs Yosys and Vivado
-    # elaboration_test(
-    #     name = "%s.elaborate" % name,
-    #     top = name,
-    # )
+    elaboration_test(
+        name = "%s.elaborate" % name,
+        top = name,
+    )

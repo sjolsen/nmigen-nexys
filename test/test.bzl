@@ -2,12 +2,29 @@
 load("@rules_python//python:defs.bzl", "py_test")
 
 
+def Workspace(ctx, label):
+    if label.workspace_name:
+        return label.workspace_name
+    else:
+        return ctx.workspace_name
+
+
+def PathJoin(*args):
+    return "/".join(args)
+
+
 def __elaboration_test_src(ctx):
     ext = ctx.file._template.extension
+    substitutions = {
+        "{EXE}": ctx.executable.top.short_path,
+        "{VIVADO}": PathJoin(
+            Workspace(ctx, ctx.attr._no_synthesis.label),
+            ctx.executable._no_synthesis.short_path),
+    }
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = ctx.outputs.src,
-        substitutions = {"{EXE}": ctx.executable.top.short_path},
+        substitutions = substitutions,
     )
 
 
@@ -26,6 +43,11 @@ _elaboration_test_src = rule(
             allow_single_file = True,
             default = "//test:elaboration_test",
         ),
+        "_no_synthesis": attr.label(
+            default = "//test:no_synthesis",
+            executable = True,
+            cfg = "exec",
+        ),
     },
     outputs = {
         "src": "%{src}"
@@ -43,5 +65,9 @@ def elaboration_test(name=None, top=None, *args, **kwargs):
     py_test(
         name = name,
         srcs = ["%s.py" % name],
-        data = [top],
+        data = [
+            top,
+            "//test:no_synthesis",
+        ],
+        deps = ["@rules_python//python/runfiles"],
     )

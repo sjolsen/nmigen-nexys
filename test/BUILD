@@ -8,6 +8,11 @@ filegroup(
     srcs = ["elaboration_test.py"],
 )
 
+py_binary(
+    name = "no_synthesis",
+    srcs = ["no_synthesis.py"],
+)
+
 py_library(
     name = "util",
     srcs = ["util.py"],
