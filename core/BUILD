@@ -8,8 +8,20 @@ load(
 package(default_visibility = ["//visibility:public"])
 
 py_library(
+    name = "edge",
+    srcs = ["edge.py"],
+    deps = nmigen_deps,
+)
+
+py_library(
     name = "pwm",
     srcs = ["pwm.py"],
+    deps = nmigen_deps,
+)
+
+py_library(
+    name = "shift_register",
+    srcs = ["shift_register.py"],
     deps = nmigen_deps,
 )
 

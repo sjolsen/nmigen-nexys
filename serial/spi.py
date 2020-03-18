@@ -1,10 +1,16 @@
 """Implementation of https://en.wikipedia.org/wiki/Serial_Peripheral_Interface."""
 
+import enum
+from typing import Optional
+
 from nmigen import *
 from nmigen.build import *
 from nmigen.hdl.rec import *
 
+from nmigen_nexys.core import edge
+from nmigen_nexys.core import shift_register
 from nmigen_nexys.core import timer
+from nmigen_nexys.core import util
 
 
 class Bus(Record):
@@ -18,72 +24,200 @@ class Bus(Record):
     ])
 
     def __init__(
-            self, clk: Signal, cs_n: Signal, mosi: Signal, miso: Signal,
+            self, cs_n: Signal, clk: Signal, mosi: Signal, miso: Signal,
             freq_Hz: int):
         super().__init__(self.LAYOUT, fields={
-            'clk': clk,
             'cs_n': cs_n,
+            'clk': clk,
             'mosi': mosi,
             'miso': miso,
         })
         self.freq_Hz = freq_Hz
 
 
-class MOSISource(Record):
-    """Source for MOSI data.
+class ClockEngine(Elaboratable):
+    """Bus clock and chip select frame generator.
 
-    When a transaction is initiated, the SPI master will pull data from this
-    interface on demand. After reading data, it will strobe next and decrement
-    count. When count reaches zero, the transaction will finish.
+    When enable is asserted, the clock source will pull chip select low and
+    begin generating clocks. When enable is released, the clock source will
+    finish the current clock cycle and drive chip select high. The enable
+    signal should not be asserted again until chip select is deasserted.
+
+    The polarity signal determines whether the clock is held high or low during
+    idle. With polarity 0, the clock is low during idle and a clock cycle begins
+    with the rising edge and ends with the falling edge. With polarity 1, the
+    clock is high during idle and a clock cycle begins with the falling edge and
+    ends with the rising edge.
     """
 
-    def __init__(self, bit_depth: int):
-        layout = Layout([
-            ('data', 1),
-            ('next', 1),
-            ('count', range(bit_depth)),
-        ])
-        super().__init__(layout)
-
-
-class MISOSink(Record):
-    """Sink for MISO data.
-
-    When the SPI master clocks in a bit, it will make it available via data and
-    strobe ready.
-    """
-
-    LAYOUT = Layout([
-        ('data', 1),
-        ('ready', 1),
-    ])
-
-    def __init__(self):
-        super().__init__(self.LAYOUT)
-
-
-class Master(Elaboratable):
-    """SPI master implementation."""
-
-    def __init__(self, bus: Bus, source: MOSISource, sink: MISOSink):
+    def __init__(self, bus: Bus, polarity: Signal,
+                 sim_clk_freq: Optional[int] = None):
         super().__init__()
         self.bus = bus
-        self.source = source
-        self.sink = sink
+        self.polarity = polarity
+        self.enable = Signal(reset=0)
+        # TODO: This shouldn't be necessary
+        self._sim_clk_freq = sim_clk_freq
+
+    def elaborate(self, platform: Platform) -> Module:
+        m = Module()
+        # Use local signals to give us control over register reset values
+        assert_cs = Signal(reset=0)
+        assert_clk = Signal(reset=0)
+        m.d.comb += self.bus.cs_n.eq(~assert_cs)
+        m.d.comb += self.bus.clk.eq(assert_clk ^ self.polarity)
+        # Set up a timer to start when enable is asserted and run at twice the
+        # bus frequency until the transaction ends
+        m.submodules.en_edge = en_edge = edge.Detector(self.enable)
+        sync_clk_freq = self._sim_clk_freq or platform.default_clk_frequency
+        m.submodules.hclk_timer = hclk_timer = timer.OneShot(
+            sync_clk_freq // (2 * self.bus.freq_Hz))
+        m.d.comb += hclk_timer.go.eq(
+            en_edge.rose | (assert_cs & hclk_timer.triggered))
+        with m.FSM(reset='IDLE'):
+            with m.State('IDLE'):
+                with m.If(en_edge.rose):
+                    m.d.sync += assert_cs.eq(1)
+                    m.next = 'LEADING_EDGE'
+            with m.State('LEADING_EDGE'):
+                with m.If(hclk_timer.triggered):
+                    with m.If(~self.enable):
+                        # End of transaction
+                        m.d.sync += assert_cs.eq(0)
+                        m.next = 'IDLE'
+                    with m.Else():
+                        m.d.sync += assert_clk.eq(1)
+                        m.next = 'TRAILING_EDGE'
+            with m.State('TRAILING_EDGE'):
+                with m.If(hclk_timer.triggered):
+                    m.d.sync += assert_clk.eq(0)
+                    m.next = 'LEADING_EDGE'
+        return m
+
+
+class BusEvent(enum.IntEnum):
+    START = 0
+    SETUP = 1
+    SAMPLE = 2
+    STOP = 3
+
+
+class BusDecoder(Elaboratable):
+
+    def __init__(self, bus: Bus, polarity: Signal, phase: Signal):
+        super().__init__()
+        self.bus = bus
+        self.polarity = polarity
+        self.phase = phase
+        self.events = Signal(4, reset=0)
+
+    def elaborate(self, _: Platform) -> Module:
+        m = Module()
+        m.submodules.cs_edge = cs_edge = edge.Detector(self.bus.cs_n)
+        m.submodules.clk_edge = clk_edge = edge.Detector(self.bus.clk)
+        m.d.comb += self.events[BusEvent.START].eq(cs_edge.fell)
+        m.d.comb += self.events[BusEvent.STOP].eq(cs_edge.rose)
+        leading_edge = Signal()
+        trailing_edge = Signal()
+        with m.Switch(self.polarity):
+            with m.Case(0):
+                m.d.comb += leading_edge.eq(clk_edge.rose)
+                m.d.comb += trailing_edge.eq(clk_edge.fell)
+                m.d.comb += self.events[BusEvent.SETUP].eq(
+                    cs_edge.fell | trailing_edge)
+                m.d.comb += self.events[BusEvent.SAMPLE].eq(leading_edge)
+            with m.Case(1):
+                m.d.comb += leading_edge.eq(clk_edge.fell)
+                m.d.comb += trailing_edge.eq(clk_edge.rose)
+                m.d.comb += self.events[BusEvent.SETUP].eq(leading_edge)
+                m.d.comb += self.events[BusEvent.SAMPLE].eq(trailing_edge)
+        return m
+
+
+class ShiftMaster(Elaboratable):
+
+    def __init__(self, bus: Bus, register: shift_register.Register,
+                 sim_clk_freq: Optional[int] = None):
+        super().__init__()
+        self.bus = bus
+        self.register = register
+        self.polarity = Signal(reset=0)
+        self.phase = Signal(reset=0)
+        self.transfer_size = Signal(range(register.width + 1), reset=0)
+        self.start = Signal(reset=0)
+        self.busy = Signal(reset=0)
+        self.done = Signal(reset=0)
+        # TODO: This shouldn't be necessary
+        self._sim_clk_freq = sim_clk_freq
+
+    def elaborate(self, _: Platform) -> Module:
+        m = Module()
+        m.submodules.clk_eng = clk_eng = ClockEngine(self.bus, self.polarity,
+                                                     self._sim_clk_freq)
+        m.submodules.decoder = decoder = BusDecoder(
+            self.bus, self.polarity, self.phase)
+        remaining = Signal(self.transfer_size.width)
+        m.d.comb += self.register.bit_in.eq(self.bus.miso)
+        m.d.sync += self.register.shift.eq(0)  # default
+        m.d.sync += self.done.eq(0)  # default
+        with m.FSM(reset='IDLE'):
+            with m.State('IDLE'):
+                with m.If(self.start):
+                    m.d.sync += remaining.eq(self.transfer_size)
+                    m.d.sync += self.busy.eq(1)
+                    m.d.sync += clk_eng.enable.eq(1)
+                    m.next = 'EVENT_LOOP'
+            with m.State('EVENT_LOOP'):
+                with m.If(decoder.events[BusEvent.SETUP]):
+                    m.d.sync += self.bus.mosi.eq(self.register.bit_out)
+                with m.If(decoder.events[BusEvent.SAMPLE]):
+                    m.d.sync += self.register.shift.eq(1)
+                    with m.If(remaining == 1):
+                        m.d.sync += clk_eng.enable.eq(0)
+                    m.d.sync += remaining.eq(remaining - 1)
+                with m.If(decoder.events[BusEvent.STOP]):
+                    m.d.sync += self.busy.eq(0)
+                    m.d.sync += self.done.eq(self.busy)
+                    m.next = 'IDLE'
+        return m
+
+
+class ShiftSlave(Elaboratable):
+
+    def __init__(self, bus: Bus, register: shift_register.Register):
+        super().__init__()
+        self.bus = bus
+        self.register = register
+        self.polarity = Signal(reset=0)
+        self.phase = Signal(reset=0)
+        self.transfer_size = Signal(range(register.width + 1), reset=0)
+        self.overrun = Signal(reset=0)
         self.start = Signal(reset=0)
         self.busy = Signal(reset=0)
         self.done = Signal(reset=0)
 
-    def elaborate(self, platform: Platform) -> Module:
+    def elaborate(self, _: Platform) -> Module:
         m = Module()
-        # Set up a timer to start when start is strobed and run at twice the
-        # bus frequency until the transaction ends
-        m.submodules.hclk_timer = hclk_timer = timer.OneShot(
-            platform.platform.default_clk_frequency // (2 * self.bus.freq_Hz))
-        m.d.comb += hclk_timer.go.eq(
-            self.start | (self.busy & hclk_timer.triggered))
-        with m.If(self.start):
+        m.submodules.decoder = decoder = BusDecoder(
+            self.bus, self.polarity, self.phase)
+        m.d.comb += self.register.bit_in.eq(self.bus.mosi)
+        m.d.sync += self.register.shift.eq(0)  # default
+        m.d.sync += self.start.eq(0)  # default
+        m.d.sync += self.done.eq(0)  # default
+        with m.If(decoder.events[BusEvent.START]):
+            m.d.sync += self.transfer_size.eq(0)
+            m.d.sync += self.overrun.eq(0)
+            m.d.sync += self.start.eq(1)
             m.d.sync += self.busy.eq(1)
-        with m.If(self.done):
+        with m.If(decoder.events[BusEvent.SETUP]):
+            m.d.sync += self.bus.miso.eq(self.register.bit_out)
+        with m.If(decoder.events[BusEvent.SAMPLE]):
+            m.d.sync += self.register.shift.eq(1)
+            with m.If(self.transfer_size == self.register.width):
+                m.d.sync += self.overrun.eq(1)
+            m.d.sync += self.transfer_size.eq(
+                util.SatAdd(self.transfer_size, 1, limit=self.register.width))
+        with m.If(decoder.events[BusEvent.STOP]):
             m.d.sync += self.busy.eq(0)
+            m.d.sync += self.done.eq(self.busy)
         return m
