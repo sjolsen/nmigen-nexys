@@ -1,3 +1,5 @@
+"""Command-line entry-point for Platform.build."""
+
 from typing import List
 
 from absl import app
@@ -23,7 +25,8 @@ def _build(argv: List[str], platform: Platform, top: Elaboratable):
     platform.build(
         top, name=FLAGS.name, build_dir=FLAGS.build_dir, do_build=FLAGS.build,
         program_opts=FLAGS.program_opts, do_program=FLAGS.program)
-    
+
 
 def main(platform: Platform, top: Elaboratable):
+    """Run platform.build(top) using command-line options."""
     app.run(lambda argv: _build(argv, platform, top))

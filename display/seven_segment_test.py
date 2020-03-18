@@ -1,3 +1,5 @@
+"""Tests for nmigen_nexys.display.seven_segment."""
+
 import unittest
 
 from nmigen import *
@@ -18,6 +20,7 @@ NINE = 0b01101111
 
 
 class BCDRendererTest(unittest.TestCase):
+    """Test the rendering of multi-digit BCD values."""
 
     def _run_test(self, input: [int], expected: [int]):
         m = Module()
@@ -49,9 +52,12 @@ class BCDRendererTest(unittest.TestCase):
         sim.run()
 
     def test_zero(self):
-        self._run_test(input=[0, 0, 0, 0], expected=[ZERO, BLANK, BLANK, BLANK])
+        """0 should render as "   0", not "0000" or "    "."""
+        self._run_test(
+            input=[0, 0, 0, 0], expected=[ZERO, BLANK, BLANK, BLANK])
 
     def test_256(self):
+        """256 should render as " 256", not "0256"."""
         self._run_test(input=[6, 5, 2, 0], expected=[SIX, FIVE, TWO, BLANK])
 
     def test_1024(self):

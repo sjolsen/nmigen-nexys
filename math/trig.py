@@ -1,3 +1,5 @@
+"""Lookup tables for trigonometric functions."""
+
 import math
 
 from nmigen import *
@@ -8,16 +10,29 @@ from nmigen_nexys.math import lut
 
 
 class SineLUT(Elaboratable):
-    
+    """Lookup table for math.sin.
+
+    The input and output resolution are determined by the input and output
+    signals. Both signed and unsigned inputs are supported. Signed inputs are
+    interpreted from the range [-pi, pi) and unsigned inputs are interpreted
+    from the range [0, 2pi).
+
+    This implementation uses a quarter-wave optimization: because each quarter-
+    phase of a sine wave is just a reflection/rotation of the others, the
+    underlying LUT covers a quarter-wave and the output is reflected/rotated as
+    appropriate.
+    """
+
     def __init__(self, input: Signal, output: Signal):
         super().__init__()
         self.input = input
         self.output = output
 
-    def elaborate(self, platform: Platform) -> Module:
+    def elaborate(self, _: Platform) -> Module:
         m = Module()
         x = Signal(self.input.width - 2)  # Four (2**2) quarter-waves
-        y = Signal(self.output.width - 1)  # Output range is doubled by mirroring
+        # Output range is doubled by mirroring
+        y = Signal(self.output.width - 1)
         qwave = lut.Rasterize(
             math.sin, umin=0.0, umax=math.pi / 2.0, xshape=x.shape(),
             vmin=0.0, vmax=1.0, yshape=y.shape())
@@ -46,13 +61,17 @@ class SineLUT(Elaboratable):
 
 
 class CosineLUT(Elaboratable):
-    
+    """Lookup table for math.sin.
+
+    This is simply a SineLUT phase-shifted by 90 degrees.
+    """
+
     def __init__(self, input: Signal, output: Signal):
         super().__init__()
         self.input = input
         self.output = output
 
-    def elaborate(self, platform: Platform) -> Module:
+    def elaborate(self, _: Platform) -> Module:
         m = Module()
         shifted = Signal(self.input.shape())
         m.submodules.sin = SineLUT(shifted, self.output)

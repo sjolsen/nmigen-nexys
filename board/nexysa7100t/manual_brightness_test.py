@@ -1,3 +1,5 @@
+"""Tests for nmigen_nexys.board.nexysa7100t.manual_brightness."""
+
 from typing import List
 import unittest
 
@@ -26,14 +28,17 @@ NINE = seven_segment.DigitLUT.TABLE[9]
 class ConversionPipelineTest(unittest.TestCase):
 
     def test_multiple(self):
+        """Test the end-to-end conversion pipeline and output a waveform."""
         m = Module()
-        m.submodules.conv = conv = manual_brightness.ConversionPipeline(Signal(8), Signal(8))
+        m.submodules.conv = conv = manual_brightness.ConversionPipeline(
+            Signal(8), Signal(8))
         rdisp_flat = util.Flatten(m, conv.rdisp)
         ldisp_flat = util.Flatten(m, conv.ldisp)
         sim = Simulator(m)
         sim.add_clock(1e-8)  # 100 MHz
 
-        def convert_one(rval: int, expected_rdisp: List[int], expected_ldisp: List[int]):
+        def convert_one(rval: int, expected_rdisp: List[int],
+                        expected_ldisp: List[int]):
             yield conv.rval.eq(rval)
             yield conv.lval.eq(2 * rval)
             yield  # Let conv automatically detect the update
@@ -49,7 +54,7 @@ class ConversionPipelineTest(unittest.TestCase):
             self.assertEqual(expected_ldisp, actual_ldisp)
 
         def convert():
-            TEST_CASES = [
+            test_cases = [
                 [0, [ZERO, BLANK, BLANK, BLANK], [ZERO, BLANK, BLANK, BLANK]],
                 [1, [ONE, BLANK, BLANK, BLANK], [TWO, BLANK, BLANK, BLANK]],
                 [2, [TWO, BLANK, BLANK, BLANK], [FOUR, BLANK, BLANK, BLANK]],
@@ -57,7 +62,7 @@ class ConversionPipelineTest(unittest.TestCase):
                 [10, [ZERO, ONE, BLANK, BLANK], [ZERO, TWO, BLANK, BLANK]],
                 [127, [SEVEN, TWO, ONE, BLANK], [FOUR, FIVE, TWO, BLANK]],
             ]
-            for rval, rdisp, ldisp in TEST_CASES:
+            for rval, rdisp, ldisp in test_cases:
                 yield from convert_one(rval, rdisp, ldisp)
 
         def timeout():
@@ -68,8 +73,8 @@ class ConversionPipelineTest(unittest.TestCase):
         sim.add_process(timeout)
         sim.add_sync_process(convert)
         with test_util.BazelWriteVCD(
-            sim, vcd_file="test.vcd", gtkw_file="test.gtkw",
-            traces=[conv.rval, rdisp_flat, ldisp_flat]):
+                sim, vcd_file="test.vcd", gtkw_file="test.gtkw",
+                traces=[conv.rval, rdisp_flat, ldisp_flat]):
             sim.run()
 
 

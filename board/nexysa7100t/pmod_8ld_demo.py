@@ -1,3 +1,5 @@
+"""Demo for https://store.digilentinc.com/pmod-8ld-eight-high-brightness-leds/."""
+
 from nmigen import *
 from nmigen.build import *
 
@@ -8,6 +10,11 @@ from nmigen_nexys.pmod import pmod_8ld
 
 
 class Demo(Elaboratable):
+    """Demo for the Digilent Pmod 8LD.
+
+    This demo assumes there are two modules plugged into JA and JB. It displays
+    a point bouncing back and forth across the two modules.
+    """
 
     def elaborate(self, platform: Platform) -> Module:
         m = Module()

@@ -1,3 +1,5 @@
+"""Instantiation of nmigen_nexys.display.seven_segment.DisplayMultiplexerDemo."""
+
 from nmigen import *
 from nmigen.build import *
 

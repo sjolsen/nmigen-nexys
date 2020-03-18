@@ -1,8 +1,16 @@
+"""Tools for working with binary-coded decimal (BCD)."""
+
 from nmigen import *
 from nmigen.build import *
 
 
 class BinToBCD(Elaboratable):
+    """Convert binary to BCD.
+
+    Rather than implementing a large swath of combinatorial logic, this
+    implementation runs a multi-cycle conversion algorithm. The conversion time
+    is proportional to the number of output digits. The output is little-endian.
+    """
 
     def __init__(self, input: Signal, output: [Signal]):
         super().__init__()
@@ -11,7 +19,7 @@ class BinToBCD(Elaboratable):
         self.output = output
         self.done = Signal(reset=0)
 
-    def elaborate(self, platform: Platform) -> Module:
+    def elaborate(self, _: Platform) -> Module:
         m = Module()
         input = Signal(self.input.width)
         output = Cat(*self.output)

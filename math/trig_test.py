@@ -1,3 +1,5 @@
+"""Tests for nmigen_nexys.math.trig."""
+
 import abc
 import math
 from typing import Callable
@@ -12,14 +14,20 @@ from nmigen_nexys.math import trig
 
 
 class SinusoidTestBase(abc.ABC):
+    """Common test logic for sine and cosine test cases.
+
+    This class should inherit from unittest.TestCase because it uses methods
+    from that class, but doing so causes unittest.main to try to instantiate
+    this class as a test in and of itself, which doesn't work.
+    """
 
     @abc.abstractproperty
     def real_fun(self) -> Callable[[float], float]:
-        pass
+        """The floating-point function used as a golden reference."""
 
     @abc.abstractproperty
     def lut_class(self) -> type:
-        pass
+        """The concrete LUT class under test."""
 
     def _run_test(self, xshape: Shape, yshape: Shape):
         m = Module()
@@ -71,6 +79,7 @@ class SinusoidTestBase(abc.ABC):
 
 
 class SineLUTTest(SinusoidTestBase, unittest.TestCase):
+    """Numerical validation across the entire range of SineLUT."""
 
     @property
     def real_fun(self) -> Callable[[float], float]:
@@ -82,6 +91,7 @@ class SineLUTTest(SinusoidTestBase, unittest.TestCase):
 
 
 class CosineLUTTest(SinusoidTestBase, unittest.TestCase):
+    """Numerical validation across the entire range of CosineLUT."""
 
     @property
     def real_fun(self) -> Callable[[float], float]:

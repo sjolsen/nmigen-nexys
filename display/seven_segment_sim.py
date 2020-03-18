@@ -1,3 +1,5 @@
+"""Simulation waveform generator for nmigen_nexys.display.seven_segment."""
+
 from nmigen import *
 from nmigen.back.pysim import *
 
@@ -13,5 +15,5 @@ if __name__ == "__main__":
     sim = Simulator(m)
     sim.add_clock(1e-8)
     with util.BazelWriteVCD(
-        sim, "test.vcd", "test.gtkw", traces=[segments, anodes]):
+            sim, "test.vcd", "test.gtkw", traces=[segments, anodes]):
         sim.run_until(100e-6, run_passive=True)

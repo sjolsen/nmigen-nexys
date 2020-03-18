@@ -1,3 +1,5 @@
+"""Tests for nmigen_nexys.math.bcd."""
+
 import unittest
 
 from nmigen import *
@@ -8,6 +10,7 @@ from nmigen_nexys.test import util
 
 
 class BinToBCDTest(unittest.TestCase):
+    """Test binary to BCD conversion."""
 
     def _run_test(self, input: int, expected: [int]):
         m = Module()

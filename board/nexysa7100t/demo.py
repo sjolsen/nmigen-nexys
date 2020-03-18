@@ -1,3 +1,5 @@
+"""Simple demo for the Nexys A7-100T."""
+
 from nmigen import *
 from nmigen.build import *
 
@@ -10,12 +12,20 @@ from nmigen_nexys.math import trig
 
 
 class Demo(Elaboratable):
+    """Simple demo for the Nexys A7-100T.
+
+    This demo displays a simple swirling pattern on each display in the
+    seven-segment display bank. The brightness is smoothly ramped up and down.
+    This demonstrates using PWM to modulate display brightness and a LUT to
+    make the brightness perceptually uniform.
+    """
 
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
 
         clk_period = int(platform.default_clk_frequency)
-        m.submodules.sin_timer = sin_timer = timer.UpTimer(clk_period * 10 // 256)
+        m.submodules.sin_timer = sin_timer = timer.UpTimer(
+            clk_period * 10 // 256)
         m.submodules.sin = sin = trig.SineLUT(Signal(8), Signal(8))
         with m.If(sin_timer.triggered):
             m.d.sync += sin.input.eq(sin.input + 1)
@@ -26,7 +36,8 @@ class Demo(Elaboratable):
         anodes = platform.request('display_7seg_an')
         m.d.comb += anodes.eq(Repl(pwm.output, 8))
 
-        m.submodules.shift_timer = shift_timer = timer.UpTimer(clk_period // 10)
+        m.submodules.shift_timer = shift_timer = timer.UpTimer(
+            clk_period // 10)
         shift_register = Signal(6, reset=0b111100)
         with m.If(shift_timer.triggered):
             m.d.sync += shift_register.eq(

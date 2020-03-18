@@ -41,7 +41,6 @@ nmigen_design(
         "//color:srgb",
         "//core:top",
         "//display:seven_segment",
-        "//math:bcd",
         requirement("nmigen"),
     ],
 )

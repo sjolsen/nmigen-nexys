@@ -1,3 +1,5 @@
+"""Base definitions for nmigen_nexys.board.nexysa7100t.manual_brightness."""
+
 from nmigen import *
 from nmigen.build import *
 from nmigen.hdl.rec import *
@@ -7,6 +9,7 @@ from nmigen_nexys.math import bcd
 
 
 class ConversionPipeline(Elaboratable):
+    """Composite binary-to-BCD-to-display pipeline."""
 
     def __init__(self, rval: Signal, lval: Signal):
         super().__init__()
@@ -16,7 +19,7 @@ class ConversionPipeline(Elaboratable):
         self.ldisp = [Signal(8, reset=0) for _ in range(4)]
         self.done = Signal(reset=0)
 
-    def elaborate(self, platform: Platform) -> Module:
+    def elaborate(self, _: Platform) -> Module:
         m = Module()
         # Intantiate the BCD pipeline
         m.submodules.b2d = b2d = bcd.BinToBCD(
