@@ -20,19 +20,23 @@ class Example(NamedTuple):
 class ShiftMasterSlaveTest(unittest.TestCase):
     """End-to-end test using example master and slave."""
 
-    def _run_test(self, examples: [Example]):
+    def _run_test(self, examples: [Example], polarity: int = 0, phase: int = 0):
         m = Module()
         bus = spi.Bus(
             cs_n=Signal(name='cs'),
             clk=Signal(name='clk'),
             mosi=Signal(name='mosi'),
             miso=Signal(name='miso'),
-            freq_Hz=1_000_000)
+            freq_Hz=10_000_000)
         m.submodules.master = master = spi.ShiftMaster(
             bus, shift_register.Up(16), sim_clk_freq=100_000_000)
         m.submodules.slave = slave = spi.ShiftSlave(
             bus, shift_register.Up(16))
         m.submodules += [master.register, slave.register]
+        m.d.comb += master.polarity.eq(polarity)
+        m.d.comb += master.phase.eq(phase)
+        m.d.comb += slave.polarity.eq(polarity)
+        m.d.comb += slave.phase.eq(phase)
         sim = Simulator(m)
         sim.add_clock(1e-8)  # 100 MHz
 
@@ -93,12 +97,23 @@ class ShiftMasterSlaveTest(unittest.TestCase):
     def test_16(self):
         self._run_test([Example(0xBEEF, 0x1234, 16)])
 
-    def test_multiple(self):
-        self._run_test([
-            Example(0xC4, 0x42, 8),
-            Example(0xBEEF, 0x1234, 16),
-            Example(0x090, 0x5A5, 12),
-        ])
+    EXAMPLES = [
+        Example(0xC4, 0x42, 8),
+        Example(0xBEEF, 0x1234, 16),
+        Example(0x090, 0x5A5, 12),
+    ]
+
+    def test_multiple_mode0(self):
+        self._run_test(self.EXAMPLES, 0, 0)
+
+    def test_multiple_mode1(self):
+        self._run_test(self.EXAMPLES, 0, 1)
+
+    def test_multiple_mode2(self):
+        self._run_test(self.EXAMPLES, 1, 0)
+
+    def test_multiple_mode3(self):
+        self._run_test(self.EXAMPLES, 1, 1)
 
 
 if __name__ == '__main__':
