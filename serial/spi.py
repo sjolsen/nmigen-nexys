@@ -152,6 +152,7 @@ class ShiftMaster(Elaboratable):
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
+        m.submodules.register = self.register
         m.submodules.clk_eng = clk_eng = ClockEngine(self.bus, self.polarity,
                                                      self._sim_clk_freq)
         m.submodules.decoder = decoder = BusDecoder(
@@ -198,6 +199,7 @@ class ShiftSlave(Elaboratable):
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
+        m.submodules.register = self.register
         m.submodules.decoder = decoder = BusDecoder(
             self.bus, self.polarity, self.phase)
         m.d.comb += self.register.bit_in.eq(self.bus.mosi)

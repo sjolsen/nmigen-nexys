@@ -24,7 +24,7 @@ class ShiftMasterSlaveTest(unittest.TestCase):
         m = Module()
         bus = spi.Bus(
             cs_n=Signal(name='cs'),
-            clk=Signal(name='clk'),
+            clk=Signal(name='spi_clk'),
             mosi=Signal(name='mosi'),
             miso=Signal(name='miso'),
             freq_Hz=10_000_000)
@@ -32,7 +32,6 @@ class ShiftMasterSlaveTest(unittest.TestCase):
             bus, shift_register.Up(16), sim_clk_freq=100_000_000)
         m.submodules.slave = slave = spi.ShiftSlave(
             bus, shift_register.Up(16))
-        m.submodules += [master.register, slave.register]
         m.d.comb += master.polarity.eq(polarity)
         m.d.comb += master.phase.eq(phase)
         m.d.comb += slave.polarity.eq(polarity)
@@ -84,8 +83,11 @@ class ShiftMasterSlaveTest(unittest.TestCase):
         sim.add_process(timeout)
         sim.add_sync_process(master_proc)
         sim.add_sync_process(slave_proc)
-        with util.BazelWriteVCD(sim, "test.vcd", "test.gtkw",
-                                traces=list(bus.fields.values())):
+        test_dir = util.BazelTestOutput(self.id())
+        os.makedirs(test_dir, exist_ok=True)
+        with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
+                           os.path.join(test_dir, "test.gtkw"),
+                           traces=list(bus.fields.values())):
             sim.run()
 
     def test_8(self):

@@ -72,9 +72,9 @@ class ConversionPipelineTest(unittest.TestCase):
 
         sim.add_process(timeout)
         sim.add_sync_process(convert)
-        with test_util.BazelWriteVCD(
-                sim, vcd_file="test.vcd", gtkw_file="test.gtkw",
-                traces=[conv.rval, rdisp_flat, ldisp_flat]):
+        with sim.write_vcd(vcd_file=test_util.BazelTestOutput("test.vcd"),
+                           gtkw_file=test_util.BazelTestOutput("test.gtkw"),
+                           traces=[conv.rval, rdisp_flat, ldisp_flat]):
             sim.run()
 
 

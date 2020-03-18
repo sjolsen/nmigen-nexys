@@ -14,6 +14,7 @@ if __name__ == "__main__":
     m.submodules.demo = seven_segment.DisplayMultiplexerDemo(segments, anodes)
     sim = Simulator(m)
     sim.add_clock(1e-8)
-    with util.BazelWriteVCD(
-            sim, "test.vcd", "test.gtkw", traces=[segments, anodes]):
+    with sim.write_vcd(util.BazelTestOutput("test.vcd"),
+                       util.BazelTestOutput("test.gtkw"),
+                       traces=[segments, anodes]):
         sim.run_until(100e-6, run_passive=True)

@@ -23,9 +23,6 @@ class Register(Elaboratable):
 
 class Up(Register):
 
-    def __init__(self, width: int):
-        super().__init__(width)
-
     def elaborate(self, _: Platform) -> Module:
         m = Module()
         reg = Signal(self.width)
@@ -39,9 +36,6 @@ class Up(Register):
 
 
 class Down(Register):
-
-    def __init__(self, width: int):
-        super().__init__(width)
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()

@@ -26,25 +26,16 @@ def WaitDone(done):
         yield
 
 
-def BazelWriteVCD(
-        sim: Simulator, vcd_file: str,
-        gtkw_file: Optional[str] = None,
-        **kwargs) -> ContextManager[None]:
-    """Write VCD outputs to the undeclared outputs directory.
+def BazelTestOutput(path):
+    """Make path relative to the test output dir, if it exists.
 
     Bazel tries to run things as hermetically as possible, which causes problems
     when trying to do non-hermetic things like produce test results. Bazel
     provides a directory specifically for this purpose (accessible under
-    bazel-testlogs) where test outputs created by this function can be found.
+    bazel-testlogs) where test outputs can be found.
     """
     outdir = os.getenv('TEST_UNDECLARED_OUTPUTS_DIR')
     if outdir is None:
-        def outfile(basename):
-            return basename
+        return path
     else:
-        def outfile(basename):
-            return os.path.join(outdir, basename)
-    return sim.write_vcd(
-        vcd_file=outfile(vcd_file),
-        gtkw_file=outfile(gtkw_file) if gtkw_file is not None else None,
-        **kwargs)
+        return os.path.join(outdir, path)
