@@ -21,6 +21,7 @@ py_library(
 
 py_test(
     name = "seven_segment_sim",
+    size = "small",
     srcs = ["seven_segment_sim.py"],
     deps = nmigen_sim_deps + [
         ":seven_segment",
@@ -30,6 +31,7 @@ py_test(
 
 py_test(
     name = "seven_segment_test",
+    size = "small",
     srcs = ["seven_segment_test.py"],
     deps = nmigen_sim_deps + [
         ":seven_segment",

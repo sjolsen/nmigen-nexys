@@ -4,7 +4,7 @@ load("@pip_deps//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//test:test.bzl", "elaboration_test")
 
-def nmigen_design(name = None, *args, **kwargs):
+def nmigen_design(name = None, size = None, *args, **kwargs):
     """An nMigen design using nmigen_nexys.core.top.main.
 
     This macro creates a simple py_binary for the design. It also automatically
@@ -12,6 +12,7 @@ def nmigen_design(name = None, *args, **kwargs):
 
     Args:
         name: The name of the target.
+        size: The size of the elaboration test.
         *args: Not allowed.
         **kwargs: Arguments to be passed to py_binary.
     """
@@ -24,6 +25,7 @@ def nmigen_design(name = None, *args, **kwargs):
     elaboration_test(
         name = "%s.elaborate" % name,
         top = name,
+        size = size,
     )
 
 # The pip rules unfortunately aren't smart enough to figure out all the

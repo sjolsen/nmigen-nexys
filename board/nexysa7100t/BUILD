@@ -15,6 +15,7 @@ package(default_visibility = ["//visibility:public"])
 
 nmigen_design(
     name = "demo",
+    size = "small",
     srcs = ["demo.py"],
     deps = nmigen_deps + [
         ":nexysa7100t",
@@ -37,6 +38,7 @@ py_library(
 
 nmigen_design(
     name = "manual_brightness_demo",
+    size = "small",
     srcs = ["manual_brightness_demo.py"],
     deps = nmigen_deps + [
         ":manual_brightness",
@@ -49,6 +51,7 @@ nmigen_design(
 
 py_test(
     name = "manual_brightness_test",
+    size = "small",
     srcs = ["manual_brightness_test.py"],
     deps = nmigen_sim_deps + [
         ":manual_brightness",
@@ -60,6 +63,7 @@ py_test(
 
 nmigen_design(
     name = "nexysa7100t",
+    size = "small",
     srcs = ["nexysa7100t.py"],
     deps = nmigen_deps + [
         "//core:top",
@@ -69,6 +73,7 @@ nmigen_design(
 
 nmigen_design(
     name = "pmod_8ld_demo",
+    size = "small",
     srcs = ["pmod_8ld_demo.py"],
     deps = nmigen_deps + [
         ":nexysa7100t",
@@ -80,6 +85,7 @@ nmigen_design(
 
 nmigen_design(
     name = "seven_segment_demo",
+    size = "small",
     srcs = ["seven_segment_demo.py"],
     deps = nmigen_deps + [
         ":nexysa7100t",

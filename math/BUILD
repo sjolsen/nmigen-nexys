@@ -15,6 +15,7 @@ py_library(
 
 py_test(
     name = "bcd_test",
+    size = "small",
     srcs = ["bcd_test.py"],
     deps = nmigen_sim_deps + [
         ":bcd",
@@ -38,6 +39,7 @@ py_library(
 
 py_test(
     name = "square_fraction_test",
+    size = "small",
     srcs = ["square_fraction_test.py"],
     deps = nmigen_sim_deps + [
         ":square_fraction",
@@ -55,6 +57,7 @@ py_library(
 
 py_test(
     name = "trig_test",
+    size = "small",
     srcs = ["trig_test.py"],
     deps = nmigen_sim_deps + [
         ":lut",
