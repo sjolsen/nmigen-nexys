@@ -1,5 +1,5 @@
-load("@pip_deps//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_library")
+load("//core:top.bzl", "nmigen_deps")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -16,5 +16,5 @@ py_binary(
 py_library(
     name = "util",
     srcs = ["util.py"],
-    deps = [requirement("nmigen")],
+    deps = nmigen_deps,
 )

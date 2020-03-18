@@ -1,8 +1,11 @@
 absl-py
+Jinja2
+MarkupSafe
 # master as of 2020-03-17 00:14 PDT
 git+https://github.com/nmigen/nmigen.git@28f5eba9fb31eec2745710152967f5b4431c6f8c
 # git+file://C:/Users/Stuart/nmigen@master
 # master as of 2020-03-17 00:14 PDT
 git+https://github.com/nmigen/nmigen-boards.git@394071da3a5896bf3f5771360813852a3893ddef
 # git+file://C:/Users/Stuart/nmigen-boards@master
+pyvcd~=0.1.4
 six

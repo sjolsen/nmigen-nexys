@@ -1,8 +1,12 @@
-load("@pip_deps//:requirements.bzl", "requirement")
 load(
     "@rules_python//python:defs.bzl",
     "py_library",
     "py_test",
+)
+load(
+    "//core:top.bzl",
+    "nmigen_deps",
+    "nmigen_sim_deps",
 )
 
 package(default_visibility = ["//visibility:public"])
@@ -10,30 +14,25 @@ package(default_visibility = ["//visibility:public"])
 py_library(
     name = "seven_segment",
     srcs = ["seven_segment.py"],
-    deps = [
+    deps = nmigen_deps + [
         "//core:pwm",
-        requirement("nmigen"),
     ],
 )
 
 py_test(
     name = "seven_segment_sim",
     srcs = ["seven_segment_sim.py"],
-    deps = [
+    deps = nmigen_sim_deps + [
         ":seven_segment",
         "//test:util",
-        requirement("nmigen"),
-        requirement("six"),  # TODO: Fix this, needed by the VCD library
     ],
 )
 
 py_test(
     name = "seven_segment_test",
     srcs = ["seven_segment_test.py"],
-    deps = [
+    deps = nmigen_sim_deps + [
         ":seven_segment",
         "//test:util",
-        requirement("nmigen"),
-        requirement("six"),  # TODO: Fix this, needed by the VCD library
     ],
 )
