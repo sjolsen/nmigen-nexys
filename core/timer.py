@@ -1,5 +1,7 @@
 """Simple timer implementations."""
 
+from typing import Union
+
 from nmigen import *
 from nmigen.build import *
 
@@ -67,9 +69,8 @@ class OneShot(Elaboratable):
     If go is strobed again before the timer expires, it will restart the timer.
     """
 
-    def __init__(self, period: int):
+    def __init__(self, period: Union[int, Signal]):
         super().__init__()
-        assert period >= 1
         self.period = period
         self.go = Signal()
         self.running = Signal()
@@ -77,10 +78,19 @@ class OneShot(Elaboratable):
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
-        counter = Signal(range(self.period + 1))
+        if isinstance(self.period, int):
+            period = Signal(range(self.period + 1), reset=self.period)
+        elif isinstance(self.period, Signal):
+            period = Signal(self.period.width)
+            with m.If(self.go):
+                m.d.sync += period.eq(self.period)
+        else:
+            raise TypeError(self.period)
+        counter = Signal(period.width + 1)
         m.d.comb += self.running.eq(counter != 0)
-        m.d.comb += self.triggered.eq(counter == self.period)
-        m.d.sync += counter.eq(Mux(self.triggered, 0, counter + 1))
-        with m.If(self.go):
-            m.d.sync += counter.eq(1)
+        with m.If(period != 0):
+            m.d.comb += self.triggered.eq(counter == period)
+            m.d.sync += counter.eq(Mux(self.triggered, 0, counter + 1))
+            with m.If(self.go):
+                m.d.sync += counter.eq(1)
         return m

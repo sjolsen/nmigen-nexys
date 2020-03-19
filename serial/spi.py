@@ -24,8 +24,8 @@ class Bus(Record):
     """Single-lane bidirectional SPI bus with chip select."""
 
     LAYOUT = Layout([
-        ('clk', 1),
         ('cs_n', 1),
+        ('clk', 1),
         ('mosi', 1),
         ('miso', 1),
     ])

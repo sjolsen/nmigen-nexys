@@ -4,19 +4,24 @@ Datasheet: https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf.
 """
 
 import enum
-from typing import Any, Literal, NamedTuple
+from typing import Any, Literal
 
 from nmigen import *
 from nmigen.build import *
-from nmigen.hdl.rec import *
 
 
-class Command(NamedTuple):
+class Command(object):
     """Encoded display controller command."""
-    data: bytes
 
     def __init__(self, *ints):
-        super().__init__(data=bytes(ints))
+        super().__init__()
+        self.data = bytes(ints)
+
+    @property
+    def bits(self) -> Const:
+        return C(
+            int.from_bytes(self.data, byteorder='big'),
+            8 * len(self.data))
 
 
 class CommandEncodingError(Exception):
@@ -290,17 +295,3 @@ def SetMultiplexRatio(ratio: int) -> Command:
 
 # 5. Timing and driving scheme setting commands
 # TODO
-
-
-class SPI4WireInterface(Record):
-
-    LAYOUT = Layout([
-        ('cs_n', 1),
-        ('dc', 1),
-        ('sclk', 1),
-        ('sdin', 1),
-    ])
-
-    def __init__(self, cs_n: Signal, dc: Signal, sclk: Signal, sdin: Signal):
-        super().__init__(self.LAYOUT,
-                         fields={f: locals()[f] for f in self.LAYOUT})
