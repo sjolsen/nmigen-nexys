@@ -42,3 +42,45 @@ class UpTimer(Elaboratable):
         m.d.comb += self.triggered.eq(counter == self.period - 1)
         m.d.sync += counter.eq(Mux(self.triggered, counter.reset, counter + 1))
         return m
+
+
+class OneShot(Elaboratable):
+    r"""Single-shot, resettable timer.
+
+    The timer will trigger period cycles after the cycle in which go is set. If
+    for instance period is 1, the timer will trigger the cycle after go is set.
+
+                     period = 1             period = 2
+                   __    __    __         __    __    __
+      clk       __/  \__/  \__/  \__   __/  \__/  \__/  \__
+                   __                     __
+      go        __/  \______________   __/  \______________
+                         __                           __
+      triggered ________/  \________   ______________/  \__
+
+                  |- 1 -|                |---- 2 ----|
+
+    In this way, the period is made to be the measure between the leading edges
+    of go and triggered. If triggered were fed back to go, the timer would
+    trigger continuously with the correct period.
+
+    If go is strobed again before the timer expires, it will restart the timer.
+    """
+
+    def __init__(self, period: int):
+        super().__init__()
+        assert period >= 1
+        self.period = period
+        self.go = Signal()
+        self.running = Signal()
+        self.triggered = Signal()
+
+    def elaborate(self, _: Platform) -> Module:
+        m = Module()
+        counter = Signal(range(self.period))
+        m.d.comb += self.running.eq(counter != 0)
+        m.d.comb += self.triggered.eq(counter == self.period - 1)
+        m.d.sync += counter.eq(Mux(self.triggered, 0, counter + 1))
+        with m.If(self.go):
+            m.d.sync += counter.eq(1)
+        return m

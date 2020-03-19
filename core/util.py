@@ -1,6 +1,6 @@
 """Language-level utilities for nMigen."""
 
-from typing import List
+from typing import List, Optional
 
 from nmigen import *
 
@@ -22,6 +22,28 @@ def ShapeMid(s: Shape) -> int:
     2**(s.width - 1).
     """
     return 0 if s.signed else 2**(s.width - 1)
+
+
+def SatAdd(a: Signal, b: int, limit: Optional[int] = None) -> Value:
+    """Saturating addition.
+
+    The result is clamped to max, which defaults to the maximum value
+    representable in a.
+    """
+    if limit is None:
+        limit = ShapeMax(a.shape())
+    return Mux(a <= limit - b, a + b, limit)
+
+
+def SatSub(a: Signal, b: int, limit: Optional[int] = None) -> Value:
+    """Saturating subtraction.
+
+    The result is clamped to limit, which defaults to the minimum value
+    representable in a.
+    """
+    if limit is None:
+        limit = ShapeMin(a.shape())
+    return Mux(a >= limit + b, a - b, limit)
 
 
 def Clamp(x: float, shape: Shape) -> int:
