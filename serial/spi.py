@@ -1,4 +1,11 @@
-"""Implementation of https://en.wikipedia.org/wiki/Serial_Peripheral_Interface."""
+"""Implementation of https://en.wikipedia.org/wiki/Serial_Peripheral_Interface.
+
+This module provides elaboratables for generating and decoding bus events. It
+also defines a SPI slave and master based on shift registers. These
+implementations are provided as a reference for integrating ClockEngine and
+BusDecoder moreso than as functional endpoints. This module does not implement
+multiplexing of chip select or tri-stating of MISO.
+"""
 
 import enum
 from typing import Optional
@@ -14,7 +21,7 @@ from nmigen_nexys.core import util
 
 
 class Bus(Record):
-    """SPI bus as seen from the master."""
+    """Single-lane bidirectional SPI bus with chip select."""
 
     LAYOUT = Layout([
         ('clk', 1),
@@ -96,6 +103,7 @@ class ClockEngine(Elaboratable):
 
 
 class BusEvent(enum.IntEnum):
+    """Bus event decoded by spi.BusDecoder."""
     START = 0
     SETUP = 1
     SAMPLE = 2
@@ -103,6 +111,17 @@ class BusEvent(enum.IntEnum):
 
 
 class BusDecoder(Elaboratable):
+    """Listen to the bus for (potentially simultaneous) events.
+
+    BusDecoder exposes bus events via the events bitmask. The START event
+    corresponds to chip select assertion; likewise, the STOP event corresponds
+    to chip select deassertion. On the SETUP event, the bus endpoint should make
+    its output available and hold until the next SETUP or STOP event. On SAMPLE,
+    the endpoint should sample its input.
+
+    Events are only emitted if chip select is asserted, making this decoder
+    suitable for use in slaves on multi-drop buses.
+    """
 
     def __init__(self, bus: Bus, polarity: Signal, phase: Signal):
         super().__init__()
@@ -131,10 +150,15 @@ class BusDecoder(Elaboratable):
                 m.d.comb += trailing_edge.eq(clk_edge.rose)
                 m.d.comb += self.events[BusEvent.SETUP].eq(leading_edge)
                 m.d.comb += self.events[BusEvent.SAMPLE].eq(trailing_edge)
+        # Do not emit SETUP/SAMPLE events if we're not being addressed
+        with m.If(self.bus.cs_n):
+            m.d.comb += self.events[BusEvent.SETUP].eq(0)
+            m.d.comb += self.events[BusEvent.SAMPLE].eq(0)
         return m
 
 
 class ShiftMaster(Elaboratable):
+    """Reference implementation of a SPI master based on a shift register."""
 
     def __init__(self, bus: Bus, register: shift_register.Register,
                  sim_clk_freq: Optional[int] = None):
@@ -184,6 +208,7 @@ class ShiftMaster(Elaboratable):
 
 
 class ShiftSlave(Elaboratable):
+    """Reference implementation of a SPI slave based on a shift register."""
 
     def __init__(self, bus: Bus, register: shift_register.Register):
         super().__init__()

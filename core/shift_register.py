@@ -1,3 +1,5 @@
+"""Shift registers implementations."""
+
 import abc
 
 from nmigen import *
@@ -5,6 +7,12 @@ from nmigen.build import *
 
 
 class Register(Elaboratable):
+    """Common interface for up- and down-shifting registers.
+
+    The entire contents of the shift register can be written from word_in by
+    strobing latch. One bit can be shifted in/out by strobing shift. The latch
+    signal takes precedence over the shift signal.
+    """
 
     def __init__(self, width: int):
         super().__init__()
@@ -22,6 +30,7 @@ class Register(Elaboratable):
 
 
 class Up(Register):
+    """Up- or left-shifting register."""
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
@@ -36,6 +45,7 @@ class Up(Register):
 
 
 class Down(Register):
+    """Down- or right-shifting register."""
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()

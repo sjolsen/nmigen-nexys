@@ -24,6 +24,7 @@ py_library(
 
 py_test(
     name = "spi_test",
+    size = "small",
     srcs = ["spi_test.py"],
     deps = nmigen_sim_deps + [
         ":spi",

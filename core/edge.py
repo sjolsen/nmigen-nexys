@@ -1,8 +1,11 @@
+"""Edge detection."""
+
 from nmigen import *
 from nmigen.build import *
 
 
 class Detector(Elaboratable):
+    """Basic rising and falling detector."""
 
     def __init__(self, input: Signal):
         super().__init__()
