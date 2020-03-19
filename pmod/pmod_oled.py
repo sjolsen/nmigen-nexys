@@ -5,11 +5,31 @@ from typing import Optional, Tuple
 
 from nmigen import *
 from nmigen.build import *
+from nmigen.hdl.rec import *
 
 from nmigen_nexys.core import shift_register
 from nmigen_nexys.core import timer as timer_module
 from nmigen_nexys.display import ssd1306
 from nmigen_nexys.serial import spi
+
+
+class PmodPins(Record):
+
+    LAYOUT = Layout([
+        ('cs', 1),
+        ('mosi', 1),
+        ('sclk', 1),
+        ('dc', 1),
+        ('reset', 1),
+        ('vbatc', 1),
+        ('vddc', 1),
+    ])
+
+    def __init__(self):
+        super().__init__(self.LAYOUT, fields={
+            name: Signal(shape, name=name)
+            for name, (shape, _) in self.LAYOUT.fields.items()
+        })
 
 
 def PmodOLEDResource(n: int, conn: Tuple[str, int]) -> Resource:
@@ -47,7 +67,7 @@ class PowerSequencer(Elaboratable):
     _DISPLAY_ON = ssd1306.SetDisplayOn(True)
     _DISPLAY_OFF = ssd1306.SetDisplayOn(False)
 
-    def __init__(self, pins: Record, sim_clk_freq: Optional[int] = None,
+    def __init__(self, pins: Pins, sim_clk_freq: Optional[int] = None,
                  sim_vcc_wait_us: Optional[int] = None):
         super().__init__()
         self.pins = pins
@@ -56,6 +76,16 @@ class PowerSequencer(Elaboratable):
         # TODO: This shouldn't be necessary
         self._sim_clk_freq = sim_clk_freq
         self._sim_vcc_wait_us = sim_vcc_wait_us
+        self.master = spi.ShiftMaster(
+            bus=spi.Bus(
+                cs_n=self.pins.cs,
+                clk=self.pins.sclk,
+                mosi=self.pins.mosi,
+                miso=Signal(name='null_miso', reset=0),
+                freq_Hz=10_000_000),
+            register=shift_register.Up(max(self._DISPLAY_ON.bits.width,
+                                           self._DISPLAY_OFF.bits.width)),
+            sim_clk_freq=self._sim_clk_freq)
 
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
@@ -67,18 +97,9 @@ class PowerSequencer(Elaboratable):
         m.d.comb += self.pins.vbatc.eq(vbat_en)
         m.d.comb += self.pins.reset.eq(reset_n)
         # Embedded SPI master for display on/off commands
-        m.submodules.master = self.master = spi.ShiftMaster(
-            bus=spi.Bus(
-                cs_n=self.pins.cs,
-                clk=self.pins.sclk,
-                mosi=self.pins.mosi,
-                miso=Signal(name='null_miso', reset=0),
-                freq_Hz=10_000_000),
-            register=shift_register.Up(max(self._DISPLAY_ON.bits.width,
-                                           self._DISPLAY_OFF.bits.width)),
-            sim_clk_freq=self._sim_clk_freq)
+        m.submodules.master = self.master
         # Wall-timed state machine
-        sync_clk_freq = self._sim_clk_freq or platform.default_clk_frequency
+        sync_clk_freq = self._sim_clk_freq or int(platform.default_clk_frequency)
         us = sync_clk_freq // 1_000_000
         vcc_wait_us = self._sim_vcc_wait_us or 100_000  # 100 ms
         m.submodules.timer = timer = timer_module.OneShot(

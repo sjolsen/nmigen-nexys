@@ -76,7 +76,7 @@ class ClockEngine(Elaboratable):
         # Set up a timer to start when enable is asserted and run at twice the
         # bus frequency until the transaction ends
         m.submodules.en_edge = en_edge = edge.Detector(self.enable)
-        sync_clk_freq = self._sim_clk_freq or platform.default_clk_frequency
+        sync_clk_freq = self._sim_clk_freq or int(platform.default_clk_frequency)
         m.submodules.hclk_timer = hclk_timer = timer.OneShot(
             sync_clk_freq // (2 * self.bus.freq_Hz))
         m.d.comb += hclk_timer.go.eq(

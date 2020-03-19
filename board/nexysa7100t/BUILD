@@ -84,6 +84,19 @@ nmigen_design(
 )
 
 nmigen_design(
+    name = "pmod_oled_demo",
+    size = "small",
+    srcs = ["pmod_oled_demo.py"],
+    deps = nmigen_deps + [
+        ":nexysa7100t",
+        "//core:timer",
+        "//core:top",
+        "//display:ssd1306",
+        "//pmod:pmod_oled",
+    ],
+)
+
+nmigen_design(
     name = "seven_segment_demo",
     size = "small",
     srcs = ["seven_segment_demo.py"],

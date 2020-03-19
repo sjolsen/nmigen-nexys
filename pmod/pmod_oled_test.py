@@ -8,30 +8,11 @@ from nmigen_nexys.pmod import pmod_oled
 from nmigen_nexys.test import util
 
 
-class MockResource(Record):
-
-    LAYOUT = Layout([
-        ('cs', 1),
-        ('mosi', 1),
-        ('sclk', 1),
-        ('dc', 1),
-        ('reset', 1),
-        ('vbatc', 1),
-        ('vddc', 1),
-    ])
-
-    def __init__(self):
-        super().__init__(self.LAYOUT, fields={
-            name: Signal(shape, name=name)
-            for name, (shape, _) in self.LAYOUT.fields.items()
-        })
-
-
 class PowerSequenceTest(unittest.TestCase):
 
     def test_up_down(self):
         m = Module()
-        pins = MockResource()
+        pins = pmod_oled.PmodPins()
         m.submodules.sequencer = sequencer = pmod_oled.PowerSequencer(
             pins, sim_clk_freq=100_000_000, sim_vcc_wait_us=20)
         sim = Simulator(m)

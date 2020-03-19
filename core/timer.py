@@ -71,6 +71,7 @@ class OneShot(Elaboratable):
 
     def __init__(self, period: Union[int, Signal]):
         super().__init__()
+        assert isinstance(period, (int, Signal))
         self.period = period
         self.go = Signal()
         self.running = Signal()
