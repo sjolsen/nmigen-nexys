@@ -1,14 +1,69 @@
 """Tests for nmigen_nexys.serial.spi."""
 
-from typing import NamedTuple
+from typing import List, NamedTuple
 import unittest
 
 from nmigen import *
 from nmigen.back.pysim import *
 
+from nmigen_nexys.core import edge
 from nmigen_nexys.core import shift_register
+from nmigen_nexys.core import util
 from nmigen_nexys.serial import spi
-from nmigen_nexys.test import util
+from nmigen_nexys.test import util as test_util
+
+
+class ClockEngineTest(unittest.TestCase):
+
+    def test_speed(self):
+        m = Module()
+        bus = spi.Bus(
+            cs_n=Signal(name='cs'),
+            clk=Signal(name='spi_clk'),
+            mosi=Signal(name='mosi'),
+            miso=Signal(name='miso'),
+            freq_Hz=10_000_000)
+        m.submodules.clk_eng = clk_eng = spi.ClockEngine(
+            bus, polarity=Signal(reset=0), sim_clk_freq=100_000_000)
+        m.submodules.clk_edge = clk_edge = edge.Detector(bus.clk)
+        timestamp = Signal(range(100), reset=0)
+        m.d.sync += timestamp.eq(timestamp + 1)
+        sim = Simulator(m)
+        sim.add_clock(1e-8)  # 100 MHz
+
+        def clock_driver():
+            yield clk_eng.enable.eq(1)
+            yield Delay(1e-6)
+
+        def clock_monitor():
+            yield Passive()
+            last_edge = None
+            while True:
+                # TODO: Should probably rename WaitDone
+                yield from test_util.WaitDone(clk_edge.rose)
+                now = yield timestamp
+                if last_edge is not None:
+                    self.assertEqual(now - last_edge, 10)
+                last_edge = now
+                yield
+        
+        def timeout():
+            yield Passive()
+            while True:
+                now = yield timestamp
+                if now == util.ShapeMax(timestamp):
+                    self.fail(f'Timed out after {now} cycles')
+                yield
+
+        sim.add_sync_process(clock_driver)
+        sim.add_sync_process(clock_monitor)
+        sim.add_sync_process(timeout)
+        test_dir = test_util.BazelTestOutput(self.id())
+        os.makedirs(test_dir, exist_ok=True)
+        with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
+                           os.path.join(test_dir, "test.gtkw"),
+                           traces=list(bus.fields.values())):
+            sim.run()
 
 
 def MasterDoOne(master: spi.ShiftMaster, mosi_data: int, size: int):
@@ -20,7 +75,7 @@ def MasterDoOne(master: spi.ShiftMaster, mosi_data: int, size: int):
     yield  # Start
     yield master.register.latch.eq(0)
     yield master.start.eq(0)
-    yield from util.WaitDone(master.done)
+    yield from test_util.WaitDone(master.done)
 
 
 def SlaveDoOne(slave: spi.ShiftSlave, miso_data: int, size: int):
@@ -29,14 +84,21 @@ def SlaveDoOne(slave: spi.ShiftSlave, miso_data: int, size: int):
     yield slave.register.latch.eq(1)
     yield  # Start
     yield slave.register.latch.eq(0)
-    yield from util.WaitDone(slave.start)
-    yield from util.WaitDone(slave.done)
+    yield from test_util.WaitDone(slave.start)
+    yield from test_util.WaitDone(slave.done)
 
 
 class Example(NamedTuple):
     mosi_data: int
     miso_data: int
     size: int
+
+
+EXAMPLES: List[Example] = [
+    Example(0xC4, 0x42, 8),
+    Example(0xBEEF, 0x1234, 16),
+    Example(0x090, 0x5A5, 12),
+]
 
 
 class ShiftMasterSlaveTest(unittest.TestCase):
@@ -86,7 +148,7 @@ class ShiftMasterSlaveTest(unittest.TestCase):
             yield slave_finish.eq(1)
 
         def wait_finish():
-            yield from util.WaitDone(finish)
+            yield from test_util.WaitDone(finish)
 
         def timeout():
             yield Passive()
@@ -97,7 +159,7 @@ class ShiftMasterSlaveTest(unittest.TestCase):
         sim.add_sync_process(master_proc)
         sim.add_sync_process(slave_proc)
         sim.add_sync_process(wait_finish)
-        test_dir = util.BazelTestOutput(self.id())
+        test_dir = test_util.BazelTestOutput(self.id())
         os.makedirs(test_dir, exist_ok=True)
         with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
                            os.path.join(test_dir, "test.gtkw"),
@@ -113,23 +175,17 @@ class ShiftMasterSlaveTest(unittest.TestCase):
     def test_16(self):
         self._run_test([Example(0xBEEF, 0x1234, 16)])
 
-    EXAMPLES = [
-        Example(0xC4, 0x42, 8),
-        Example(0xBEEF, 0x1234, 16),
-        Example(0x090, 0x5A5, 12),
-    ]
-
     def test_multiple_mode0(self):
-        self._run_test(self.EXAMPLES, 0, 0)
+        self._run_test(EXAMPLES, 0, 0)
 
     def test_multiple_mode1(self):
-        self._run_test(self.EXAMPLES, 0, 1)
+        self._run_test(EXAMPLES, 0, 1)
 
     def test_multiple_mode2(self):
-        self._run_test(self.EXAMPLES, 1, 0)
+        self._run_test(EXAMPLES, 1, 0)
 
     def test_multiple_mode3(self):
-        self._run_test(self.EXAMPLES, 1, 1)
+        self._run_test(EXAMPLES, 1, 1)
 
 
 class NoChipSelectTest(unittest.TestCase):
@@ -157,7 +213,7 @@ class NoChipSelectTest(unittest.TestCase):
         sim.add_clock(1e-8)  # 100 MHz
 
         def master_proc():
-            for example in ShiftMasterSlaveTest.EXAMPLES:
+            for example in EXAMPLES:
                 self.assertNotEqual(example.miso_data, 0)
                 yield from MasterDoOne(master, example.mosi_data, example.size)
                 actual = yield master.register.word_out[:example.size]
@@ -165,7 +221,7 @@ class NoChipSelectTest(unittest.TestCase):
 
         def slave_proc():
             yield Passive()
-            for example in ShiftMasterSlaveTest.EXAMPLES:
+            for example in EXAMPLES:
                 yield from SlaveDoOne(slave, example.miso_data, example.size)
                 self.fail('Slave transfer should not have completed!')
 
@@ -192,7 +248,7 @@ class NoChipSelectTest(unittest.TestCase):
         sim.add_sync_process(always_monitor(slave.done, 0))
         sim.add_sync_process(always_monitor(slave.register.shift, 0))
         sim.add_sync_process(always_monitor(master_bus.miso, 0))
-        test_dir = util.BazelTestOutput(self.id())
+        test_dir = test_util.BazelTestOutput(self.id())
         os.makedirs(test_dir, exist_ok=True)
         traces = [
             master_bus.cs_n, slave_bus.cs_n, master_bus.clk, master_bus.mosi,

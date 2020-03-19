@@ -28,7 +28,9 @@ py_test(
     srcs = ["spi_test.py"],
     deps = nmigen_sim_deps + [
         ":spi",
+        "//core:edge",
         "//core:shift_register",
+        "//core:util",
         "//test:util",
     ],
 )

@@ -77,9 +77,9 @@ class OneShot(Elaboratable):
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
-        counter = Signal(range(self.period))
+        counter = Signal(range(self.period + 1))
         m.d.comb += self.running.eq(counter != 0)
-        m.d.comb += self.triggered.eq(counter == self.period - 1)
+        m.d.comb += self.triggered.eq(counter == self.period)
         m.d.sync += counter.eq(Mux(self.triggered, 0, counter + 1))
         with m.If(self.go):
             m.d.sync += counter.eq(1)
