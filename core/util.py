@@ -1,8 +1,11 @@
 """Language-level utilities for nMigen."""
 
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 from nmigen import *
+from nmigen.hdl.ast import Assign
+from nmigen.hdl.rec import Direction, Layout, Record
+from nmigen.utils import log2_int
 
 
 def ShapeMin(s: Shape) -> int:
@@ -63,3 +66,43 @@ def Flatten(m: Module, input: List[Signal]) -> Signal:
     flat = Signal(cat.shape())
     m.d.comb += flat.eq(cat)
     return flat
+
+
+class MultiplexError(Exception):
+    pass
+
+
+def NMux(select: Signal, signals: List[Signal]) -> Value:
+    """Multiplex arbitrarily many signals."""
+    if len(signals) == 0:
+        raise MultiplexError('Cannot mux zero signals')
+    if len(signals) == 1:
+        return signals[0]
+    nbits = log2_int(len(signals), need_pow2=False)
+    midpoint = (1 << nbits) // 2
+    low = signals[:midpoint]
+    high = signals[midpoint:]
+    return Mux(select[nbits - 1], NMux(select[:nbits - 1], high),
+               NMux(select[:nbits - 1], low))
+
+
+def Multiplex(select: Signal, root: Record,
+              leaves: List[Record]) -> Iterable[Assign]:
+    """Multiplex entire objects.
+
+    Fan-in signals are multiplexed from the leaves to the root using select.
+    Fan-out signals are propagated unconditionally from the root to the leaves.
+    """
+    for field, (shape, direction) in root.layout.fields.items():
+        sub_root = getattr(root, field)
+        sub_leaves = [getattr(leaf, field) for leaf in leaves]
+        if isinstance(shape, Layout):
+            yield from Multiplex(select, sub_root, sub_leaves)
+        elif direction == Direction.FANIN:
+            yield sub_root.eq(NMux(select, sub_leaves))
+        elif direction == Direction.FANOUT:
+            yield Cat(*sub_leaves).eq(Repl(sub_root, len(sub_leaves)))
+        else:
+            raise MultiplexError(
+                f'Could not multiplex field {field} with shape {shape} and '
+                f'direction {direction}')

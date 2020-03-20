@@ -8,11 +8,12 @@ multiplexing of chip select or tri-stating of MISO.
 """
 
 import enum
-from typing import Optional
+from typing import Iterable, Optional
 
 from nmigen import *
 from nmigen.build import *
-from nmigen.hdl.rec import *
+from nmigen.hdl.ast import Assign
+from nmigen.hdl.rec import Direction, Layout, Record
 
 from nmigen_nexys.core import edge
 from nmigen_nexys.core import shift_register
@@ -160,17 +161,72 @@ class BusDecoder(Elaboratable):
 class ShiftMaster(Elaboratable):
     """Reference implementation of a SPI master based on a shift register."""
 
+    class Interface(Record):
+        """Multiplexable interface to the SPI master.
+
+        Typical usage looks like:
+
+            m.d.sync += interface.start.eq(0)  # default
+            with m.State('STATE_A'):
+                m.d.sync += interface.WriteMosi(mosi_data)
+                m.d.sync += interface.start.eq(1)
+                m.next = 'STATE_B'
+            with m.State('STATE_B'):
+                with m.If(interface.done):
+                    m.d.sync += use.eq(interface.ReadMiso(mosi_data.width))
+                    m.next = ...
+        """
+
+        def __init__(self, width: int, name_hint: Optional[str] = None):
+            layout = Layout([
+                ('mosi_data', width, Direction.FANIN),
+                ('miso_data', width, Direction.FANOUT),
+                ('transfer_size', range(width + 1), Direction.FANIN),
+                ('start', 1, Direction.FANIN),
+                ('done', 1, Direction.FANOUT),
+            ])
+            mkname = lambda name: f'{name}_{name_hint}' if name_hint else name
+            super().__init__(layout, fields={
+                name: Signal(shape, name=mkname(name), reset=0)
+                for name, (shape, _) in layout.fields.items()
+            })
+            self.width = width
+
+        def WriteMosi(self, mosi_data: Signal) -> Iterable[Assign]:
+            yield self.mosi_data.eq(
+                mosi_data << self.mosi_data.width - mosi_data.width)
+            yield self.transfer_size.eq(mosi_data.width)
+
+        def ReadMiso(self, width: int) -> Value:
+            return self.miso_data[:width]
+
+    class Multiplexer(Elaboratable):
+        """Multiplexer for ShiftMaster.Interface."""
+
+        def __init__(self, n: int, root: 'ShiftMaster.Interface'):
+            super().__init__()
+            self.n = n
+            self.root = root
+            self.select = Signal(range(n), reset=0)
+            self.interfaces = [
+                ShiftMaster.Interface(root.width, name_hint=str(i))
+                for i in range(n)
+            ]
+
+        def elaborate(self, _: Platform) -> Module:
+            m = Module()
+            m.d.comb += util.Multiplex(self.select, self.root, self.interfaces)
+            return m
+
     def __init__(self, bus: Bus, register: shift_register.Register,
                  sim_clk_freq: Optional[int] = None):
         super().__init__()
         self.bus = bus
         self.register = register
+        self.interface = self.Interface(register.width)
         self.polarity = Signal(reset=0)
         self.phase = Signal(reset=0)
-        self.transfer_size = Signal(range(register.width + 1), reset=0)
-        self.start = Signal(reset=0)
         self.busy = Signal(reset=0)
-        self.done = Signal(reset=0)
         # TODO: This shouldn't be necessary
         self._sim_clk_freq = sim_clk_freq
 
@@ -181,14 +237,17 @@ class ShiftMaster(Elaboratable):
                                                      self._sim_clk_freq)
         m.submodules.decoder = decoder = BusDecoder(
             self.bus, self.polarity, self.phase)
-        remaining = Signal(self.transfer_size.width)
+        remaining = Signal(self.interface.transfer_size.width)
+        m.d.comb += self.interface.miso_data.eq(self.register.word_out)
+        m.d.comb += self.register.word_in.eq(self.interface.mosi_data)
+        m.d.comb += self.register.latch.eq(self.interface.start)
         m.d.comb += self.register.bit_in.eq(self.bus.miso)
         m.d.sync += self.register.shift.eq(0)  # default
-        m.d.sync += self.done.eq(0)  # default
+        m.d.sync += self.interface.done.eq(0)  # default
         with m.FSM(reset='IDLE'):
             with m.State('IDLE'):
-                with m.If(self.start):
-                    m.d.sync += remaining.eq(self.transfer_size)
+                with m.If(self.interface.start):
+                    m.d.sync += remaining.eq(self.interface.transfer_size)
                     m.d.sync += self.busy.eq(1)
                     m.d.sync += clk_eng.enable.eq(1)
                     m.next = 'EVENT_LOOP'
@@ -202,7 +261,7 @@ class ShiftMaster(Elaboratable):
                     m.d.sync += remaining.eq(remaining - 1)
                 with m.If(decoder.events[BusEvent.STOP]):
                     m.d.sync += self.busy.eq(0)
-                    m.d.sync += self.done.eq(self.busy)
+                    m.d.sync += self.interface.done.eq(self.busy)
                     m.next = 'IDLE'
         return m
 
