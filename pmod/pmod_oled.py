@@ -90,8 +90,8 @@ class PowerSequencer(Elaboratable):
         vdd_en = Signal(reset=0)
         vbat_en = Signal(reset=0)
         reset_n = Signal(reset=0)
-        m.d.comb += self.pins.vddc.eq(vdd_en)
-        m.d.comb += self.pins.vbatc.eq(vbat_en)
+        m.d.comb += self.pins.vddc.eq(~vdd_en)
+        m.d.comb += self.pins.vbatc.eq(~vbat_en)
         m.d.comb += self.controller.reset_n.eq(reset_n)
         # Wall-timed state machine
         us = util.GetClockFreq(platform) // 1_000_000
@@ -112,24 +112,24 @@ class PowerSequencer(Elaboratable):
             with m.State('HOLDING_RESET'):
                 with m.If(timer.triggered):
                     m.d.sync += reset_n.eq(1)
-                    m.d.sync += vbat_en.eq(1)
                     m.d.sync += self.controller.WriteCommand(
                         self._CHARGE_PUMP_ON)
                     m.d.sync += self.controller.start.eq(1)
-                    m.next = 'WAITING_FOR_VCC_READY'
-            with m.State('WAITING_FOR_VCC_READY'):
+                    m.next = 'WAITING_FOR_CHARGE_PUMP_ON'
+            with m.State('WAITING_FOR_CHARGE_PUMP_ON'):
                 with m.If(self.controller.done):
+                    m.d.sync += vbat_en.eq(1)
+                    m.d.sync += timer.period.eq(vcc_wait_us * us)
+                    m.d.sync += timer.go.eq(1)
+                    m.next = 'WAITING_FOR_VCC_ON'
+            with m.State('WAITING_FOR_VCC_ON'):
+                with m.If(timer.triggered):
                     m.d.sync += self.controller.WriteCommand(
                         self._DISPLAY_ON)
                     m.d.sync += self.controller.start.eq(1)
                     m.next = 'WAITING_FOR_DISPLAY_ON'
             with m.State('WAITING_FOR_DISPLAY_ON'):
                 with m.If(self.controller.done):
-                    m.d.sync += timer.period.eq(vcc_wait_us * us)
-                    m.d.sync += timer.go.eq(1)
-                    m.next = 'WAITING_FOR_SEG_COM_ON'
-            with m.State('WAITING_FOR_SEG_COM_ON'):
-                with m.If(timer.triggered):
                     m.d.sync += self.status.eq(PowerStatus.READY)
                     m.next = 'ON'
             with m.State('ON'):
