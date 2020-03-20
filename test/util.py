@@ -1,8 +1,9 @@
 """Utilities for test and simulation."""
 
-from typing import ContextManager, Optional
+import os
 
-from nmigen.back.pysim import *
+
+SIMULATION_CLOCK_FREQUENCY = 100_000_000
 
 
 def YieldList(l, result):

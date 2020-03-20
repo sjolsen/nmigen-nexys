@@ -4,10 +4,18 @@ Datasheet: https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf.
 """
 
 import enum
-from typing import Any, Literal
+from typing import Any, Iterable, Literal
 
 from nmigen import *
 from nmigen.build import *
+from nmigen.hdl.ast import Assign
+from nmigen.hdl.rec import Direction, Layout, Record
+
+from nmigen_nexys.core import shift_register
+from nmigen_nexys.serial import spi
+
+
+MAX_COMMAND_BYTES = 7
 
 
 class Command(object):
@@ -15,6 +23,7 @@ class Command(object):
 
     def __init__(self, *ints):
         super().__init__()
+        assert len(ints) <= MAX_COMMAND_BYTES
         self.data = bytes(ints)
 
     @property
@@ -295,3 +304,69 @@ def SetMultiplexRatio(ratio: int) -> Command:
 
 # 5. Timing and driving scheme setting commands
 # TODO
+
+
+class Bus(Record):
+
+    LAYOUT = Layout([
+        ('reset_n', 1, Direction.FANOUT),
+        ('dc', 1, Direction.FANOUT),
+        ('cs_n', 1, Direction.FANOUT),
+        ('clk', 1, Direction.FANOUT),
+        ('mosi', 1, Direction.FANOUT),
+    ])
+
+    def __init__(self, **kwargs):
+        super().__init__(self.LAYOUT, fields=kwargs)
+
+    def SPIBus(self) -> spi.Bus:
+        return spi.Bus(
+            cs_n=self.cs_n,
+            clk=self.clk,
+            mosi=self.mosi,
+            miso=Signal(name='miso', reset=0),
+            freq_Hz=10_000_000)
+
+
+class SSD1306(Elaboratable):
+
+    class Interface(Record):
+
+        def __init__(self, max_bits: int):
+            super().__init__(Layout([
+                ('reset_n', 1, Direction.FANIN),
+                ('dc', 1, Direction.FANIN),
+                ('data', max_bits, Direction.FANIN),
+                ('data_size', range(max_bits + 1), Direction.FANIN),
+                ('start', 1, Direction.FANIN),
+                ('done', 1, Direction.FANOUT),
+            ]))
+
+        def WriteData(self, data: bytes, dc=1) -> Iterable[Assign]:
+            data_size = 8 * len(data)
+            assert 0 < data_size <= self.data.width
+            yield self.dc.eq(dc)
+            yield self.data[-data_size:].eq(
+                int.from_bytes(data, byteorder='big'))
+            yield self.data_size.eq(data_size)
+
+        def WriteCommand(self, command: Command) -> Iterable[Assign]:
+            yield from self.WriteData(command.data, dc=0)
+
+    def __init__(self, bus: Bus, max_data_bytes: int):
+        super().__init__()
+        self.bus = bus
+        self.max_bits = 8 * max(max_data_bytes, MAX_COMMAND_BYTES)
+        self.interface = self.Interface(self.max_bits)
+
+    def elaborate(self, _: Platform) -> Module:
+        m = Module()
+        m.d.comb += self.bus.reset_n.eq(self.interface.reset_n)
+        m.d.comb += self.bus.dc.eq(self.interface.dc)
+        m.submodules.master = master = spi.ShiftMaster(
+            self.bus.SPIBus(), shift_register.Up(self.max_bits))
+        m.d.comb += master.interface.mosi_data.eq(self.interface.data)
+        m.d.comb += master.interface.transfer_size.eq(self.interface.data_size)
+        m.d.comb += master.interface.start.eq(self.interface.start)
+        m.d.comb += self.interface.done.eq(master.interface.done)
+        return m

@@ -23,6 +23,7 @@ py_library(
     deps = nmigen_deps + [
         "//core:shift_register",
         "//core:timer",
+        "//core:util",
         "//display:ssd1306",
         "//serial:spi",
     ],
@@ -34,6 +35,7 @@ py_test(
     srcs = ["pmod_oled_test.py"],
     deps = nmigen_sim_deps + [
         ":pmod_oled",
+        "//display:ssd1306",
         "//test:util",
     ],
 )

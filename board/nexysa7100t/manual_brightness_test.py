@@ -35,7 +35,7 @@ class ConversionPipelineTest(unittest.TestCase):
         rdisp_flat = util.Flatten(m, conv.rdisp)
         ldisp_flat = util.Flatten(m, conv.ldisp)
         sim = Simulator(m)
-        sim.add_clock(1e-8)  # 100 MHz
+        sim.add_clock(1.0 / test_util.SIMULATION_CLOCK_FREQUENCY)
 
         def convert_one(rval: int, expected_rdisp: List[int],
                         expected_ldisp: List[int]):

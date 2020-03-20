@@ -42,5 +42,8 @@ py_test(
 py_library(
     name = "ssd1306",
     srcs = ["ssd1306.py"],
-    deps = nmigen_deps,
+    deps = nmigen_deps + [
+        "//core:shift_register",
+        "//serial:spi",
+    ],
 )

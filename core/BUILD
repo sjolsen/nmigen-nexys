@@ -40,5 +40,7 @@ py_library(
 py_library(
     name = "util",
     srcs = ["util.py"],
-    deps = nmigen_deps,
+    deps = nmigen_deps + [
+        "//test:util"
+    ],
 )

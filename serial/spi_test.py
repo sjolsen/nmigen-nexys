@@ -24,12 +24,12 @@ class ClockEngineTest(unittest.TestCase):
             miso=Signal(name='miso'),
             freq_Hz=10_000_000)
         m.submodules.clk_eng = clk_eng = spi.ClockEngine(
-            bus, polarity=Signal(reset=0), sim_clk_freq=100_000_000)
+            bus, polarity=Signal(reset=0))
         m.submodules.clk_edge = clk_edge = edge.Detector(bus.clk)
         timestamp = Signal(range(100), reset=0)
         m.d.sync += timestamp.eq(timestamp + 1)
         sim = Simulator(m)
-        sim.add_clock(1e-8)  # 100 MHz
+        sim.add_clock(1.0 / test_util.SIMULATION_CLOCK_FREQUENCY)
 
         def clock_driver():
             yield clk_eng.enable.eq(1)
@@ -112,7 +112,7 @@ class ShiftMasterSlaveTest(unittest.TestCase):
             miso=Signal(name='miso'),
             freq_Hz=10_000_000)
         m.submodules.master = master = spi.ShiftMaster(
-            bus, shift_register.Up(16), sim_clk_freq=100_000_000)
+            bus, shift_register.Up(16))
         m.submodules.slave = slave = spi.ShiftSlave(
             bus, shift_register.Up(16))
         m.d.comb += master.polarity.eq(polarity)
@@ -124,7 +124,7 @@ class ShiftMasterSlaveTest(unittest.TestCase):
         finish = Signal()
         m.d.comb += finish.eq(master_finish & slave_finish)
         sim = Simulator(m)
-        sim.add_clock(1e-8)  # 100 MHz
+        sim.add_clock(1.0 / test_util.SIMULATION_CLOCK_FREQUENCY)
 
         def master_proc():
             yield Passive()
@@ -205,11 +205,11 @@ class NoChipSelectTest(unittest.TestCase):
             miso=master_bus.miso,
             freq_Hz=10_000_000)
         m.submodules.master = master = spi.ShiftMaster(
-            master_bus, shift_register.Up(16), sim_clk_freq=100_000_000)
+            master_bus, shift_register.Up(16))
         m.submodules.slave = slave = spi.ShiftSlave(
             slave_bus, shift_register.Up(16))
         sim = Simulator(m)
-        sim.add_clock(1e-8)  # 100 MHz
+        sim.add_clock(1.0 / test_util.SIMULATION_CLOCK_FREQUENCY)
 
         def master_proc():
             for example in EXAMPLES:
@@ -271,7 +271,7 @@ class MultiplexerTest(unittest.TestCase):
             miso=Signal(name='miso'),
             freq_Hz=10_000_000)
         m.submodules.master = master = spi.ShiftMaster(
-            bus, shift_register.Up(16), sim_clk_freq=100_000_000)
+            bus, shift_register.Up(16))
         m.submodules.slave = slave = spi.ShiftSlave(
             bus, shift_register.Up(16))
         m.submodules.mux = mux = master.Multiplexer(
@@ -281,7 +281,7 @@ class MultiplexerTest(unittest.TestCase):
         finish = Signal()
         m.d.comb += finish.eq(Cat(*master_finish, slave_finish).all())
         sim = Simulator(m)
-        sim.add_clock(1e-8)  # 100 MHz
+        sim.add_clock(1.0 / test_util.SIMULATION_CLOCK_FREQUENCY)
 
         def master_proc(n: int):
             def process():

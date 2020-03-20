@@ -3,9 +3,12 @@
 from typing import Iterable, List, Optional
 
 from nmigen import *
+from nmigen.build import Platform
 from nmigen.hdl.ast import Assign
 from nmigen.hdl.rec import Direction, Layout, Record
 from nmigen.utils import log2_int
+
+from nmigen_nexys.test import util as test_util
 
 
 def ShapeMin(s: Shape) -> int:
@@ -66,6 +69,12 @@ def Flatten(m: Module, input: List[Signal]) -> Signal:
     flat = Signal(cat.shape())
     m.d.comb += flat.eq(cat)
     return flat
+
+
+def GetClockFreq(platform: Platform) -> int:
+    if platform is not None:
+        return int(platform.default_clk_frequency)
+    return test_util.SIMULATION_CLOCK_FREQUENCY
 
 
 class MultiplexError(Exception):

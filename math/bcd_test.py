@@ -18,7 +18,7 @@ class BinToBCDTest(unittest.TestCase):
             input=Signal(range(input + 1)),
             output=[Signal(4) for _ in expected])
         sim = Simulator(m)
-        sim.add_clock(1e-8)  # 100 MHz
+        sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
         def convert():
             yield b2d.input.eq(input)
