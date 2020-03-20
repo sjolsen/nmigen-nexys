@@ -13,7 +13,7 @@ from typing import Iterable, Optional
 from nmigen import *
 from nmigen.build import *
 from nmigen.hdl.ast import Assign
-from nmigen.hdl.rec import Layout, Record
+from nmigen.hdl.rec import Direction, Layout, Record
 
 from nmigen_nexys.core import edge
 from nmigen_nexys.core import shift_register
@@ -161,7 +161,7 @@ class BusDecoder(Elaboratable):
 class ShiftMaster(Elaboratable):
     """Reference implementation of a SPI master based on a shift register."""
 
-    class Interface(object):
+    class Interface(Record):
         """Multiplexable interface to the SPI master.
 
         Typical usage looks like:
@@ -178,15 +178,19 @@ class ShiftMaster(Elaboratable):
         """
 
         def __init__(self, width: int, name_hint: Optional[str] = None):
-            super().__init__()
+            layout = Layout([
+                ('mosi_data', width, Direction.FANIN),
+                ('miso_data', width, Direction.FANOUT),
+                ('transfer_size', range(width + 1), Direction.FANIN),
+                ('start', 1, Direction.FANIN),
+                ('done', 1, Direction.FANOUT),
+            ])
             mkname = lambda name: f'{name}_{name_hint}' if name_hint else name
+            super().__init__(layout, fields={
+                name: Signal(shape, name=mkname(name), reset=0)
+                for name, (shape, _) in layout.fields.items()
+            })
             self.width = width
-            self.mosi_data = Signal(width, name=mkname('mosi_data'))
-            self.miso_data = Signal(width, name=mkname('miso_data'))
-            self.transfer_size = Signal(range(width + 1), reset=0,
-                                        name=mkname('transfer_size'))
-            self.start = Signal(reset=0, name=mkname('start'))
-            self.done = Signal(reset=0, name=mkname('done'))
 
         def WriteMosi(self, mosi_data: Signal) -> Iterable[Assign]:
             yield self.mosi_data.eq(
@@ -211,10 +215,7 @@ class ShiftMaster(Elaboratable):
 
         def elaborate(self, _: Platform) -> Module:
             m = Module()
-            m.d.comb += util.Multiplex(
-                self.select, self.root, self.interfaces,
-                fan_in=['mosi_data', 'transfer_size', 'start'],
-                fan_out=['miso_data', 'done'])
+            m.d.comb += util.Multiplex(self.select, self.root, self.interfaces)
             return m
 
     def __init__(self, bus: Bus, register: shift_register.Register,
