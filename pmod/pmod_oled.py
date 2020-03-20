@@ -69,8 +69,10 @@ class PowerStatus(enum.IntEnum):
 
 class PowerSequencer(Elaboratable):
 
+    _CHARGE_PUMP_ON = ssd1306.ChargePumpSetting(True)
     _DISPLAY_ON = ssd1306.SetDisplayOn(True)
     _DISPLAY_OFF = ssd1306.SetDisplayOn(False)
+    _CHARGE_PUMP_OFF = ssd1306.ChargePumpSetting(False)
 
     def __init__(self, pins: Pins,
                  controller: ssd1306.SSD1306.Interface,
@@ -111,11 +113,12 @@ class PowerSequencer(Elaboratable):
                 with m.If(timer.triggered):
                     m.d.sync += reset_n.eq(1)
                     m.d.sync += vbat_en.eq(1)
-                    m.d.sync += timer.period.eq(1 * us)
-                    m.d.sync += timer.go.eq(1)
+                    m.d.sync += self.controller.WriteCommand(
+                        self._CHARGE_PUMP_ON)
+                    m.d.sync += self.controller.start.eq(1)
                     m.next = 'WAITING_FOR_VCC_READY'
             with m.State('WAITING_FOR_VCC_READY'):
-                with m.If(timer.triggered):
+                with m.If(self.controller.done):
                     m.d.sync += self.controller.WriteCommand(
                         self._DISPLAY_ON)
                     m.d.sync += self.controller.start.eq(1)
@@ -137,6 +140,12 @@ class PowerSequencer(Elaboratable):
                     m.d.sync += self.controller.start.eq(1)
                     m.next = 'WAITING_FOR_DISPLAY_OFF'
             with m.State('WAITING_FOR_DISPLAY_OFF'):
+                with m.If(self.controller.done):
+                    m.d.sync += self.controller.WriteCommand(
+                        self._CHARGE_PUMP_OFF)
+                    m.d.sync += self.controller.start.eq(1)
+                    m.next = 'WAITING_FOR_CHARGE_PUMP_OFF'
+            with m.State('WAITING_FOR_CHARGE_PUMP_OFF'):
                 with m.If(self.controller.done):
                     m.d.sync += vbat_en.eq(0)
                     m.d.sync += timer.period.eq(vcc_wait_us * us)

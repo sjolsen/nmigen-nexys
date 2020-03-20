@@ -306,6 +306,22 @@ def SetMultiplexRatio(ratio: int) -> Command:
 # TODO
 
 
+def ChargePumpSetting(enable: bool) -> Command:
+    """Charge Pump Setting.
+
+    Note: The Charge Pump must be enabled by the following command:
+        8Dh ; Charge Pump Setting
+        14h ; Enable Charge Pump
+        AFh ; Display ON
+
+    Args:
+        enable:
+            False: Disable charge pump (RESET)
+            True: Enable charge pump during display on
+    """
+    return Command(0x8D, 0x10 | (int(enable) << 2))
+
+
 class Bus(Record):
 
     LAYOUT = Layout([
