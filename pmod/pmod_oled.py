@@ -73,11 +73,11 @@ class PowerSequencer(Elaboratable):
     _DISPLAY_OFF = ssd1306.SetDisplayOn(False)
 
     def __init__(self, pins: Pins,
-                 ssd1306_interface: ssd1306.SSD1306.Interface,
+                 controller: ssd1306.SSD1306.Interface,
                  sim_vcc_wait_us: Optional[int] = None):
         super().__init__()
         self.pins = pins
-        self.ssd1306_interface = ssd1306_interface
+        self.controller = controller
         self.enable = Signal(reset=0)
         self.status = Signal(PowerStatus, reset=PowerStatus.OFF)
         self._sim_vcc_wait_us = sim_vcc_wait_us
@@ -90,14 +90,14 @@ class PowerSequencer(Elaboratable):
         reset_n = Signal(reset=0)
         m.d.comb += self.pins.vddc.eq(vdd_en)
         m.d.comb += self.pins.vbatc.eq(vbat_en)
-        m.d.comb += self.pins.reset.eq(reset_n)
+        m.d.comb += self.controller.reset_n.eq(reset_n)
         # Wall-timed state machine
         us = util.GetClockFreq(platform) // 1_000_000
         vcc_wait_us = self._sim_vcc_wait_us or 100_000  # 100 ms
         m.submodules.timer = timer = timer_module.OneShot(
             period=Signal(range(vcc_wait_us * us), reset=0))
         m.d.sync += timer.go.eq(0)  # default
-        m.d.sync += self.ssd1306_interface.start.eq(0)  # default
+        m.d.sync += self.controller.start.eq(0)  # default
         with m.FSM(reset='OFF'):
             with m.State('OFF'):
                 m.d.sync += self.status.eq(PowerStatus.OFF)
@@ -116,12 +116,12 @@ class PowerSequencer(Elaboratable):
                     m.next = 'WAITING_FOR_VCC_READY'
             with m.State('WAITING_FOR_VCC_READY'):
                 with m.If(timer.triggered):
-                    m.d.sync += self.ssd1306_interface.WriteCommand(
+                    m.d.sync += self.controller.WriteCommand(
                         self._DISPLAY_ON)
-                    m.d.sync += self.ssd1306_interface.start.eq(1)
+                    m.d.sync += self.controller.start.eq(1)
                     m.next = 'WAITING_FOR_DISPLAY_ON'
             with m.State('WAITING_FOR_DISPLAY_ON'):
-                with m.If(self.ssd1306_interface.done):
+                with m.If(self.controller.done):
                     m.d.sync += timer.period.eq(vcc_wait_us * us)
                     m.d.sync += timer.go.eq(1)
                     m.next = 'WAITING_FOR_SEG_COM_ON'
@@ -132,12 +132,12 @@ class PowerSequencer(Elaboratable):
             with m.State('ON'):
                 with m.If(~self.enable):
                     m.d.sync += self.status.eq(PowerStatus.POWERING_DOWN)
-                    m.d.sync += self.ssd1306_interface.WriteCommand(
+                    m.d.sync += self.controller.WriteCommand(
                         self._DISPLAY_OFF)
-                    m.d.sync += self.ssd1306_interface.start.eq(1)
+                    m.d.sync += self.controller.start.eq(1)
                     m.next = 'WAITING_FOR_DISPLAY_OFF'
             with m.State('WAITING_FOR_DISPLAY_OFF'):
-                with m.If(self.ssd1306_interface.done):
+                with m.If(self.controller.done):
                     m.d.sync += vbat_en.eq(0)
                     m.d.sync += timer.period.eq(vcc_wait_us * us)
                     m.d.sync += timer.go.eq(1)

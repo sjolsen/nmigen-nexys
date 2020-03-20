@@ -91,6 +91,7 @@ nmigen_design(
         ":nexysa7100t",
         "//core:timer",
         "//core:top",
+        "//core:util",
         "//display:ssd1306",
         "//pmod:pmod_oled",
     ],

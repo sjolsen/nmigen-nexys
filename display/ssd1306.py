@@ -341,6 +341,7 @@ class SSD1306(Elaboratable):
                 ('start', 1, Direction.FANIN),
                 ('done', 1, Direction.FANOUT),
             ]))
+            self.max_bits = max_bits
 
         def WriteData(self, data: bytes, dc=1) -> Iterable[Assign]:
             data_size = 8 * len(data)

@@ -4,7 +4,7 @@ from nmigen import *
 from nmigen.back.pysim import *
 from nmigen.hdl.rec import *
 
-from nmigen_nexys.display import ssd1306 as ssd1306_module
+from nmigen_nexys.display import ssd1306
 from nmigen_nexys.pmod import pmod_oled
 from nmigen_nexys.test import util
 
@@ -14,10 +14,10 @@ class PowerSequenceTest(unittest.TestCase):
     def test_up_down(self):
         m = Module()
         pins = pmod_oled.PmodPins()
-        m.submodules.ssd1306 = ssd1306 = ssd1306_module.SSD1306(
+        m.submodules.controller = controller = ssd1306.SSD1306(
             pins.ControllerBus(), max_data_bytes=0)
         m.submodules.sequencer = sequencer = pmod_oled.PowerSequencer(
-            pins, ssd1306.interface, sim_vcc_wait_us=20)
+            pins, controller.interface, sim_vcc_wait_us=20)
         sim = Simulator(m)
         sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
