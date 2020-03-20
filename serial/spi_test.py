@@ -46,7 +46,7 @@ class ClockEngineTest(unittest.TestCase):
                     self.assertEqual(now - last_edge, 10)
                 last_edge = now
                 yield
-        
+
         def timeout():
             yield Passive()
             while True:
@@ -66,16 +66,15 @@ class ClockEngineTest(unittest.TestCase):
             sim.run()
 
 
-def MasterDoOne(master: spi.ShiftMaster, mosi_data: int, size: int):
+def MasterDoOne(master: spi.ShiftMaster.Interface, mosi_data: int, size: int):
     """Simulation only: initiate and complete a transaction."""
-    yield master.register.word_in.eq(mosi_data << master.register.width - size)
-    yield master.register.latch.eq(1)
-    yield master.transfer_size.eq(size)
+    yield from master.WriteMosi(C(mosi_data, size))
     yield master.start.eq(1)
     yield  # Start
-    yield master.register.latch.eq(0)
     yield master.start.eq(0)
     yield from test_util.WaitDone(master.done)
+    miso_data = yield master.ReadMiso(size)
+    return miso_data
 
 
 def SlaveDoOne(slave: spi.ShiftSlave, miso_data: int, size: int):
@@ -130,8 +129,8 @@ class ShiftMasterSlaveTest(unittest.TestCase):
         def master_proc():
             yield Passive()
             for example in examples:
-                yield from MasterDoOne(master, example.mosi_data, example.size)
-                actual = yield master.register.word_out[:example.size]
+                actual = yield from MasterDoOne(
+                    master.interface, example.mosi_data, example.size)
                 self.assertEqual(actual, example.miso_data)
             yield master_finish.eq(1)
 
@@ -215,8 +214,8 @@ class NoChipSelectTest(unittest.TestCase):
         def master_proc():
             for example in EXAMPLES:
                 self.assertNotEqual(example.miso_data, 0)
-                yield from MasterDoOne(master, example.mosi_data, example.size)
-                actual = yield master.register.word_out[:example.size]
+                actual = yield from MasterDoOne(
+                    master.interface, example.mosi_data, example.size)
                 self.assertEqual(actual, 0)
 
         def slave_proc():
@@ -257,6 +256,75 @@ class NoChipSelectTest(unittest.TestCase):
         with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
                            os.path.join(test_dir, "test.gtkw"),
                            traces=traces):
+            sim.run()
+
+
+class MultiplexerTest(unittest.TestCase):
+    """Test application-side multiplexing."""
+
+    def test_multiplexer(self):
+        m = Module()
+        bus = spi.Bus(
+            cs_n=Signal(name='cs'),
+            clk=Signal(name='spi_clk'),
+            mosi=Signal(name='mosi'),
+            miso=Signal(name='miso'),
+            freq_Hz=10_000_000)
+        m.submodules.master = master = spi.ShiftMaster(
+            bus, shift_register.Up(16), sim_clk_freq=100_000_000)
+        m.submodules.slave = slave = spi.ShiftSlave(
+            bus, shift_register.Up(16))
+        m.submodules.mux = mux = master.Multiplexer(
+            len(EXAMPLES), master.interface)
+        master_finish = [Signal(reset=0) for _ in range(mux.n)]
+        slave_finish = Signal(reset=0)
+        finish = Signal()
+        m.d.comb += finish.eq(Cat(*master_finish, slave_finish).all())
+        sim = Simulator(m)
+        sim.add_clock(1e-8)  # 100 MHz
+
+        def master_proc(n: int):
+            def process():
+                yield Passive()
+                example = EXAMPLES[n]
+                yield from test_util.WaitDone(mux.select == n)
+                actual = yield from MasterDoOne(
+                    mux.interfaces[n], example.mosi_data, example.size)
+                self.assertEqual(actual, example.miso_data)
+                yield master_finish[n].eq(1)
+                yield mux.select.eq(mux.select + 1)
+            return process
+
+        def slave_proc():
+            yield Passive()
+            for example in EXAMPLES:
+                yield from SlaveDoOne(slave, example.miso_data, example.size)
+                overrun = yield slave.overrun
+                actual_size = yield slave.transfer_size
+                actual = yield slave.register.word_out[:example.size]
+                self.assertFalse(overrun)
+                self.assertEqual(actual_size, example.size)
+                self.assertEqual(actual, example.mosi_data)
+            yield slave_finish.eq(1)
+
+        def wait_finish():
+            yield from test_util.WaitDone(finish)
+
+        def timeout():
+            yield Passive()
+            yield Delay(100e-6)
+            self.fail('Timed out after 100 us')
+
+        sim.add_process(timeout)
+        for n in range(mux.n):
+            sim.add_sync_process(master_proc(n))
+        sim.add_sync_process(slave_proc)
+        sim.add_sync_process(wait_finish)
+        test_dir = test_util.BazelTestOutput(self.id())
+        os.makedirs(test_dir, exist_ok=True)
+        with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
+                           os.path.join(test_dir, "test.gtkw"),
+                           traces=list(bus.fields.values())):
             sim.run()
 
 

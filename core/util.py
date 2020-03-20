@@ -1,8 +1,10 @@
 """Language-level utilities for nMigen."""
 
-from typing import List, Optional
+from typing import Iterable, List, Optional, TypeVar
 
 from nmigen import *
+from nmigen.hdl.ast import Assign
+from nmigen.utils import log2_int
 
 
 def ShapeMin(s: Shape) -> int:
@@ -63,3 +65,35 @@ def Flatten(m: Module, input: List[Signal]) -> Signal:
     flat = Signal(cat.shape())
     m.d.comb += flat.eq(cat)
     return flat
+
+
+def NMux(select: Signal, signals: List[Signal]) -> Value:
+    """Multiplex arbitrarily many signals."""
+    assert len(signals) != 0
+    if len(signals) == 1:
+        return signals[0]
+    nbits = log2_int(len(signals), need_pow2=False)
+    midpoint = (1 << nbits) // 2
+    low = signals[:midpoint]
+    high = signals[midpoint:]
+    return Mux(select[nbits - 1], NMux(select[:nbits - 1], high),
+               NMux(select[:nbits - 1], low))
+
+
+T = TypeVar('T')
+def Multiplex(select: Signal, root: T, leaves: List[T], fan_in: List[str],
+              fan_out: List[str]) -> Iterable[Assign]:
+    """Multiplex entire objects.
+
+    T may contain both input and output signals. Signals listed under fan_in are
+    multiplexed from the leaves to the root using select. Signals listed under
+    fan_out are propagated unconditionally from the root to the leaves.
+    """
+    for field in fan_in:
+        dst = getattr(root, field)
+        srcs = [getattr(leaf, field) for leaf in leaves]
+        yield dst.eq(NMux(select, srcs))
+    for field in fan_out:
+        src = getattr(root, field)
+        dsts = [getattr(leaf, field) for leaf in leaves]
+        yield Cat(*dsts).eq(Repl(src, len(dsts)))
