@@ -4,7 +4,7 @@ Datasheet: https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf.
 """
 
 import enum
-from typing import Any, Iterable, Literal
+from typing import Any, Iterable, Literal, Union
 
 from nmigen import *
 from nmigen.build import *
@@ -404,12 +404,16 @@ class SSD1306(Elaboratable):
             ]))
             self.max_bits = max_bits
 
-        def WriteData(self, data: bytes, dc=1) -> Iterable[Assign]:
-            data_size = 8 * len(data)
-            assert 0 < data_size <= self.data.width
+        def WriteData(self, data: Union[bytes, Signal], dc=1) -> Iterable[Assign]:
+            if isinstance(data, bytes):
+                data_size = 8 * len(data)
+                assert 0 < data_size <= self.data.width
+                bits = int.from_bytes(data, byteorder='big')
+            elif isinstance(data, Signal):
+                data_size = data.width
+                bits = data
             yield self.dc.eq(dc)
-            yield self.data[-data_size:].eq(
-                int.from_bytes(data, byteorder='big'))
+            yield self.data[-data_size:].eq(bits)
             yield self.data_size.eq(data_size)
 
         def WriteCommand(self, command: Command) -> Iterable[Assign]:
