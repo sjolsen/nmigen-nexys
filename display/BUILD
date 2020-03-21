@@ -44,6 +44,7 @@ py_library(
     srcs = ["ssd1306.py"],
     deps = nmigen_deps + [
         "//core:shift_register",
+        "//core:util",
         "//serial:spi",
     ],
 )

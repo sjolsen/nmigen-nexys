@@ -23,7 +23,7 @@ def WaitDone(done):
     while True:
         x = yield done
         if x:
-            break
+            return x
         yield
 
 

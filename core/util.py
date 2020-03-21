@@ -1,5 +1,6 @@
 """Language-level utilities for nMigen."""
 
+import inspect
 from typing import Iterable, List, Optional
 
 from nmigen import *
@@ -9,6 +10,17 @@ from nmigen.hdl.rec import Direction, Layout, Record
 from nmigen.utils import log2_int
 
 from nmigen_nexys.test import util as test_util
+
+
+def ProductRepr(obj: object) -> str:
+    # Use the non-self constructor arguments
+    params = inspect.getfullargspec(type(obj).__init__).args[1:]
+    clsname = type(obj).__name__
+    if len(params) > 1:
+        args = [f'{p}={getattr(obj, p)}' for p in params]
+    else:
+        args = [f'{getattr(obj, p)}' for p in params]
+    return f'{clsname}({", ".join(args)})'
 
 
 def ShapeMin(s: Shape) -> int:

@@ -6,7 +6,7 @@ from nmigen_nexys.core import timer as timer_module
 from nmigen_nexys.core import top
 from nmigen_nexys.core import util
 from nmigen_nexys.display import ssd1306
-from nmigen_nexys.pmod import pmod_oled
+from nmigen_nexys.pmod.oled import pmod_oled
 
 
 class Demo(Elaboratable):

@@ -80,6 +80,7 @@ class OneShot(Elaboratable):
     def elaborate(self, _: Platform) -> Module:
         m = Module()
         if isinstance(self.period, int):
+            assert self.period != 0
             period = Signal(range(self.period + 1), reset=self.period)
         elif isinstance(self.period, Signal):
             period = Signal(self.period.width)
@@ -89,9 +90,9 @@ class OneShot(Elaboratable):
             raise TypeError(self.period)
         counter = Signal(period.width + 1)
         m.d.comb += self.running.eq(counter != 0)
-        with m.If(period != 0):
-            m.d.comb += self.triggered.eq(counter == period)
-            m.d.sync += counter.eq(Mux(self.triggered, 0, counter + 1))
-            with m.If(self.go):
-                m.d.sync += counter.eq(1)
+        m.d.comb += self.triggered.eq(self.running & (counter == period))
+        m.d.sync += counter.eq(
+            Mux(self.running & ~self.triggered, counter + 1, 0))
+        with m.If(self.go):
+            m.d.sync += counter.eq(1)
         return m

@@ -14,6 +14,12 @@ py_library(
 )
 
 py_library(
+    name = "flop",
+    srcs = ["flop.py"],
+    deps = nmigen_deps,
+)
+
+py_library(
     name = "pwm",
     srcs = ["pwm.py"],
     deps = nmigen_deps,
