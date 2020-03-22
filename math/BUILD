@@ -24,6 +24,14 @@ py_test(
 )
 
 py_library(
+    name = "lfsr",
+    srcs = ["lfsr.py"],
+    deps = nmigen_deps + [
+        "//core:shift_register",
+    ],
+)
+
+py_library(
     name = "lut",
     srcs = ["lut.py"],
     deps = nmigen_deps + [

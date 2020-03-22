@@ -211,22 +211,25 @@ class ContinuousHorizontalScrollSetup(Command):
 #     return Command(0x10 | address)
 
 
-# class AddressingMode(enum.IntEnum):
-#     HORIZONTAL = 0
-#     VERTICAL = 1
-#     PAGE = 2
+class AddressingMode(enum.IntEnum):
+    HORIZONTAL = 0
+    VERTICAL = 1
+    PAGE = 2
 
 
-# def SetMemoryAddressingMode(mode: AddressingMode) -> Command:
-#     """Set Memory Addressing Mode.
+class SetMemoryAddressingMode(Command):
+    """Set Memory Addressing Mode.
 
-#     Args:
-#         mode:
-#             HORIZONTAL: Horizontal Addressing Mode
-#             VERTICAL: Vertical Addressing Mode
-#             PAGE: Page Addressing Mode
-#     """
-#     return Command(0x20, int(mode))
+    Args:
+        mode:
+            HORIZONTAL: Horizontal Addressing Mode
+            VERTICAL: Vertical Addressing Mode
+            PAGE: Page Addressing Mode
+    """
+
+    def __init__(self, mode: AddressingMode):
+        super().__init__(0x20, int(mode))
+        self.mode = mode
 
 
 # def SetColumnAddress(start_address: int, end_address: int) -> Command:

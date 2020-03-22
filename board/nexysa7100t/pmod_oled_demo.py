@@ -2,10 +2,12 @@ from nmigen import *
 from nmigen.build import *
 
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
+from nmigen_nexys.core import shift_register
 from nmigen_nexys.core import timer as timer_module
 from nmigen_nexys.core import top
 from nmigen_nexys.core import util
 from nmigen_nexys.display import ssd1306
+from nmigen_nexys.math import lfsr as lfsr_module
 from nmigen_nexys.pmod.oled import pmod_oled
 
 
@@ -13,10 +15,16 @@ class Demo(Elaboratable):
 
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
+        m.submodules.lfsr = lfsr = lfsr_module.Fibonacci(
+            polynomial=[24, 23, 22, 17, 1], seed=0x123456)
+        m.submodules.data = data = shift_register.Up(64)
+        m.d.comb += data.bit_in.eq(lfsr.output)
+        m.d.comb += data.shift.eq(1)
+
         pins = pmod_oled.PmodPins()
         m.d.comb += platform.request('pmod_oled', 0).eq(pins)
         m.submodules.controller = controller = ssd1306.SSD1306(
-            pins.ControllerBus(), max_data_bytes=1)
+            pins.ControllerBus(), max_data_bytes=8)
         ifaces = [
             ssd1306.SSD1306.Interface(controller.interface.max_bits)
             for _ in range(2)
@@ -27,7 +35,6 @@ class Demo(Elaboratable):
             pins, ifaces[0])
         m.submodules.timer = timer = timer_module.UpTimer(
             util.GetClockFreq(platform) // 10)
-        data = Signal(8, reset=0)
         m.d.sync += ifaces[1].start.eq(0)  # default
         with m.FSM(reset='RESET'):
             with m.State('RESET'):
@@ -39,15 +46,15 @@ class Demo(Elaboratable):
             with m.State('WAIT_UP'):
                 with m.If(sequencer.status == pmod_oled.PowerStatus.READY):
                     m.d.sync += select.eq(1)
+                    m.d.sync += ifaces[1].WriteCommand(
+                        ssd1306.SetMemoryAddressingMode(
+                            ssd1306.AddressingMode.VERTICAL))
+                    m.d.sync += ifaces[1].start.eq(1)
                     m.next = 'DRAW'
             with m.State('DRAW'):
-                with m.If(timer.triggered):
-                    m.d.sync += ifaces[1].WriteData(data)
-                    m.d.sync += data.eq(data + 1)
-                    m.next = 'WAIT_DRAWN'
-            with m.State('WAIT_DRAWN'):
                 with m.If(ifaces[1].done):
-                    m.next = 'DRAW'
+                    m.d.sync += ifaces[1].WriteData(data.word_out)
+                    m.d.sync += ifaces[1].start.eq(1)
 
         leds = Cat(*[platform.request('led', i) for i in range(4)])
         m.d.comb += leds.eq(1 << sequencer.status)

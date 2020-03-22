@@ -93,6 +93,7 @@ nmigen_design(
         "//core:top",
         "//core:util",
         "//display:ssd1306",
+        "//math:lfsr",
         "//pmod/oled:pmod_oled",
     ],
 )
