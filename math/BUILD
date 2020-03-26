@@ -19,7 +19,8 @@ py_test(
     srcs = ["bcd_test.py"],
     deps = nmigen_sim_deps + [
         ":bcd",
-        "//test:util",
+        "//core:util",
+        "//test:test_util",
     ],
 )
 

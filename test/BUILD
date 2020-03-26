@@ -1,5 +1,9 @@
-load("@rules_python//python:defs.bzl", "py_library")
-load("//core:top.bzl", "nmigen_deps")
+load(
+    "@rules_python//python:defs.bzl",
+    "py_binary",
+    "py_library",
+)
+load("//core:top.bzl", "nmigen_sim_deps")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -14,6 +18,9 @@ py_binary(
 )
 
 py_library(
-    name = "util",
-    srcs = ["util.py"],
+    name = "test_util",
+    srcs = ["test_util.py"],
+    deps = nmigen_sim_deps + [
+        "//core:util",
+    ],
 )

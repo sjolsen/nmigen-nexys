@@ -5,8 +5,9 @@ import unittest
 from nmigen import *
 from nmigen.back.pysim import *
 
+from nmigen_nexys.core import util
 from nmigen_nexys.math import bcd
-from nmigen_nexys.test import util
+from nmigen_nexys.test import test_util
 
 
 class BinToBCDTest(unittest.TestCase):
@@ -24,8 +25,8 @@ class BinToBCDTest(unittest.TestCase):
             yield b2d.input.eq(input)
             yield b2d.start.eq(1)
             yield  # Update input and start
-            yield from util.WaitDone(b2d.done)
-            actual = yield from util.YieldList(b2d.output)
+            yield from test_util.WaitSync(b2d.done)
+            actual = yield from test_util.YieldList(b2d.output)
             print(f'Input: {input}')
             print(f'Expected: {expected}')
             print(f'Actual: {actual}')

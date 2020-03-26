@@ -40,8 +40,9 @@ py_test(
     deps = nmigen_sim_deps + [
         ":pmod_oled",
         "//core:edge",
+        "//core:util",
         "//display:ssd1306",
         "//serial:spi",
-        "//test:util",
+        "//test:test_util",
     ],
 )

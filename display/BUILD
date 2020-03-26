@@ -25,7 +25,8 @@ py_test(
     srcs = ["seven_segment_sim.py"],
     deps = nmigen_sim_deps + [
         ":seven_segment",
-        "//test:util",
+        "//core:util",
+        "//test:test_util",
     ],
 )
 
@@ -35,7 +36,8 @@ py_test(
     srcs = ["seven_segment_test.py"],
     deps = nmigen_sim_deps + [
         ":seven_segment",
-        "//test:util",
+        "//core:util",
+        "//test:test_util",
     ],
 )
 

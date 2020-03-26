@@ -57,7 +57,7 @@ py_test(
         ":manual_brightness",
         "//core:util",
         "//display:seven_segment",
-        "//test:util",
+        "//test:test_util",
     ],
 )
 
@@ -107,5 +107,19 @@ nmigen_design(
         ":nexysa7100t",
         "//core:top",
         "//display:seven_segment",
+    ],
+)
+
+nmigen_design(
+    name = "uart_demo",
+    size = "small",
+    srcs = ["uart_demo.py"],
+    deps = nmigen_deps + [
+        ":nexysa7100t",
+        "//core:timer",
+        "//core:top",
+        "//core:util",
+        "//math:lut",
+        "//serial:uart",
     ],
 )

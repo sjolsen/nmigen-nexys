@@ -10,7 +10,7 @@ from nmigen_nexys.core import edge
 from nmigen_nexys.core import shift_register
 from nmigen_nexys.core import util
 from nmigen_nexys.serial import spi
-from nmigen_nexys.test import util as test_util
+from nmigen_nexys.test import test_util
 
 
 class ClockEngineTest(unittest.TestCase):
@@ -29,7 +29,7 @@ class ClockEngineTest(unittest.TestCase):
         timestamp = Signal(range(100), reset=0)
         m.d.sync += timestamp.eq(timestamp + 1)
         sim = Simulator(m)
-        sim.add_clock(1.0 / test_util.SIMULATION_CLOCK_FREQUENCY)
+        sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
         def clock_driver():
             yield clk_eng.enable.eq(1)
@@ -39,8 +39,7 @@ class ClockEngineTest(unittest.TestCase):
             yield Passive()
             last_edge = None
             while True:
-                # TODO: Should probably rename WaitDone
-                yield from test_util.WaitDone(clk_edge.rose)
+                yield from test_util.WaitSync(clk_edge.rose)
                 now = yield timestamp
                 if last_edge is not None:
                     self.assertEqual(now - last_edge, 10)
@@ -72,7 +71,7 @@ def MasterDoOne(master: spi.ShiftMaster.Interface, mosi_data: int, size: int):
     yield master.start.eq(1)
     yield  # Start
     yield master.start.eq(0)
-    yield from test_util.WaitDone(master.done)
+    yield from test_util.WaitSync(master.done)
     miso_data = yield master.ReadMiso(size)
     return miso_data
 
@@ -83,8 +82,8 @@ def SlaveDoOne(slave: spi.ShiftSlave, miso_data: int, size: int):
     yield slave.register.latch.eq(1)
     yield  # Start
     yield slave.register.latch.eq(0)
-    yield from test_util.WaitDone(slave.start)
-    yield from test_util.WaitDone(slave.done)
+    yield from test_util.WaitSync(slave.start)
+    yield from test_util.WaitSync(slave.done)
 
 
 class Example(NamedTuple):
@@ -124,7 +123,7 @@ class ShiftMasterSlaveTest(unittest.TestCase):
         finish = Signal()
         m.d.comb += finish.eq(master_finish & slave_finish)
         sim = Simulator(m)
-        sim.add_clock(1.0 / test_util.SIMULATION_CLOCK_FREQUENCY)
+        sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
         def master_proc():
             yield Passive()
@@ -147,7 +146,7 @@ class ShiftMasterSlaveTest(unittest.TestCase):
             yield slave_finish.eq(1)
 
         def wait_finish():
-            yield from test_util.WaitDone(finish)
+            yield from test_util.WaitSync(finish)
 
         def timeout():
             yield Passive()
@@ -209,7 +208,7 @@ class NoChipSelectTest(unittest.TestCase):
         m.submodules.slave = slave = spi.ShiftSlave(
             slave_bus, shift_register.Up(16))
         sim = Simulator(m)
-        sim.add_clock(1.0 / test_util.SIMULATION_CLOCK_FREQUENCY)
+        sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
         def master_proc():
             for example in EXAMPLES:
@@ -281,13 +280,13 @@ class MultiplexerTest(unittest.TestCase):
         finish = Signal()
         m.d.comb += finish.eq(Cat(*master_finish, slave_finish).all())
         sim = Simulator(m)
-        sim.add_clock(1.0 / test_util.SIMULATION_CLOCK_FREQUENCY)
+        sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
         def master_proc(n: int):
             def process():
                 yield Passive()
                 example = EXAMPLES[n]
-                yield from test_util.WaitDone(mux.select == n)
+                yield from test_util.WaitSync(mux.select == n)
                 actual = yield from MasterDoOne(
                     mux.interfaces[n], example.mosi_data, example.size)
                 self.assertEqual(actual, example.miso_data)
@@ -308,7 +307,7 @@ class MultiplexerTest(unittest.TestCase):
             yield slave_finish.eq(1)
 
         def wait_finish():
-            yield from test_util.WaitDone(finish)
+            yield from test_util.WaitSync(finish)
 
         def timeout():
             yield Passive()

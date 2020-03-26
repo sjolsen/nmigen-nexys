@@ -8,10 +8,11 @@ from nmigen.back.pysim import *
 from nmigen.hdl.rec import *
 
 from nmigen_nexys.core import edge
+from nmigen_nexys.core import util
 from nmigen_nexys.display import ssd1306
 from nmigen_nexys.pmod.oled import pmod_oled
 from nmigen_nexys.serial import spi
-from nmigen_nexys.test import util
+from nmigen_nexys.test import test_util
 
 
 def ByteFromBits(bits: List[int]) -> int:
@@ -70,24 +71,24 @@ class PowerSequenceTest(unittest.TestCase):
         def sequencer_process():
             yield sequencer.enable.eq(1)
             yield
-            yield from util.WaitDone(
+            yield from test_util.WaitSync(
                 sequencer.status == pmod_oled.PowerStatus.READY)
             yield sequencer.enable.eq(0)
             yield
-            yield from util.WaitDone(
+            yield from test_util.WaitSync(
                 sequencer.status == pmod_oled.PowerStatus.OFF)
 
         def spi_monitor():
             yield Passive()
             while True:
-                events = yield from util.WaitDone(decoder.events)
+                events = yield from test_util.WaitSync(decoder.events)
                 yield
                 if not (events & (1 << spi.BusEvent.START)):
                     continue
                 dc = None
                 bits = []
                 while True:
-                    events = yield from util.WaitDone(decoder.events)
+                    events = yield from test_util.WaitSync(decoder.events)
                     if events & (1 << spi.BusEvent.SAMPLE):
                         bit = yield pins.mosi
                         bits.append(bit)
@@ -133,7 +134,7 @@ class PowerSequenceTest(unittest.TestCase):
         sim.add_sync_process(spi_monitor)
         sim.add_sync_process(edge_monitor)
         sim.add_sync_process(timeout)
-        test_dir = util.BazelTestOutput(self.id())
+        test_dir = test_util.BazelTestOutput(self.id())
         os.makedirs(test_dir, exist_ok=True)
         with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
                            os.path.join(test_dir, "test.gtkw"),
