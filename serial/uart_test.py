@@ -14,6 +14,8 @@ class TransmitTest(unittest.TestCase):
         m = Module()
         m.submodules.tx = tx = uart.Transmit(12_000_000)
         sampling = Signal(name='sampling', reset=0)
+        tx_done = Signal()
+        rx_done = Signal()
         sim = Simulator(m)
         sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
@@ -24,6 +26,7 @@ class TransmitTest(unittest.TestCase):
             yield
             yield tx.start.eq(0)
             yield from test_util.WaitSync(tx.done)
+            yield tx_done.eq(1)
 
         def sampling_monitor():
             yield Passive()
@@ -33,6 +36,7 @@ class TransmitTest(unittest.TestCase):
                 self.assertFalse((yield sampling))
 
         def receive():
+            yield Passive()
             # TODO: Use the equivalent of @negedge when it exists.
             yield from test_util.WaitNegedge(tx.output)
             period = 1 / 12_000_000
@@ -49,6 +53,10 @@ class TransmitTest(unittest.TestCase):
                     yield Delay(period - 2 * delta)
             # START + 0x41 + STOP
             self.assertEqual(bits, [0] + [1, 0, 0, 0, 0, 0, 1, 0] + [1])
+            yield rx_done.eq(1)
+
+        def wait_done():
+            yield from test_util.WaitSync(tx_done & rx_done)
 
         def timeout():
             yield Passive()
@@ -58,12 +66,61 @@ class TransmitTest(unittest.TestCase):
         sim.add_sync_process(transmit)
         sim.add_process(sampling_monitor)
         sim.add_process(receive)
+        sim.add_sync_process(wait_done)
         sim.add_process(timeout)
         test_dir = test_util.BazelTestOutput(self.id())
         os.makedirs(test_dir, exist_ok=True)
         with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
                            os.path.join(test_dir, "test.gtkw"),
                            traces=[tx.busy, tx.output, sampling]):
+            sim.run()
+
+
+class ReceiveTest(unittest.TestCase):
+
+    def test_transmit(self):
+        m = Module()
+        m.submodules.tx = tx = uart.Transmit(12_000_000)
+        m.submodules.rx = rx = uart.Receive(12_000_000)
+        m.d.comb += rx.input.eq(tx.output)
+        tx_done = Signal()
+        rx_done = Signal()
+        sim = Simulator(m)
+        sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
+
+        def transmit():
+            yield Passive()
+            yield tx.data.eq(ord('A'))
+            yield tx.start.eq(1)
+            yield
+            yield tx.start.eq(0)
+            yield from test_util.WaitSync(tx.done)
+            yield tx_done.eq(1)
+
+        def receive():
+            yield Passive()
+            yield from test_util.WaitSync(rx.start)
+            yield from test_util.WaitSync(rx.done)
+            self.assertEqual((yield rx.data), ord('A'))
+            yield rx_done.eq(1)
+
+        def wait_done():
+            yield from test_util.WaitSync(tx_done & rx_done)
+
+        def timeout():
+            yield Passive()
+            yield Delay(1e-6)
+            self.fail('Timed out after 1 us')
+
+        sim.add_sync_process(transmit)
+        sim.add_sync_process(receive)
+        sim.add_sync_process(wait_done)
+        sim.add_process(timeout)
+        test_dir = test_util.BazelTestOutput(self.id())
+        os.makedirs(test_dir, exist_ok=True)
+        with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
+                           os.path.join(test_dir, "test.gtkw"),
+                           traces=[rx.start, rx.busy, rx.done, rx.data]):
             sim.run()
 
 

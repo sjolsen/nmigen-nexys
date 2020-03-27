@@ -39,6 +39,7 @@ py_library(
     name = "uart",
     srcs = ["uart.py"],
     deps = nmigen_deps + [
+        "//core:edge",
         "//core:shift_register",
         "//core:timer",
         "//core:util",
