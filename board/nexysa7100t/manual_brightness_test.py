@@ -43,10 +43,8 @@ class ConversionPipelineTest(unittest.TestCase):
             yield conv.lval.eq(2 * rval)
             yield  # Let conv automatically detect the update
             yield from test_util.WaitDone(conv.done)
-            actual_rdisp = []
-            yield from test_util.YieldList(conv.rdisp, actual_rdisp)
-            actual_ldisp = []
-            yield from test_util.YieldList(conv.ldisp, actual_ldisp)
+            actual_rdisp = yield from test_util.YieldList(conv.rdisp)
+            actual_ldisp = yield from test_util.YieldList(conv.ldisp)
             print(f'Input: {rval}')
             print(f'Expected: {expected_rdisp}, {expected_ldisp}')
             print(f'Actual: {actual_rdisp}, {actual_ldisp}')

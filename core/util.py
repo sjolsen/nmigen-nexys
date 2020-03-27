@@ -13,6 +13,20 @@ from nmigen_nexys.test import util as test_util
 
 
 def ProductRepr(obj: object) -> str:
+    """Common __repr__ implementation for simple product types.
+
+    ProductRepr assumes the non-self arguments to the object's type's __init__
+    method correspond to properties on the object. It uses the name of the type,
+    the names of those properties, and the values of those properties to render
+    the object. If there is only one property, the name is omitted for brevity.
+    For example:
+
+        StartCommand(address=127, data=5)
+        StopCommand(1)
+
+    This function is particularly useful for generating FSM strings that are
+    rendered in GTKWave.
+    """
     # Use the non-self constructor arguments
     params = inspect.getfullargspec(type(obj).__init__).args[1:]
     clsname = type(obj).__name__
@@ -83,14 +97,20 @@ def Flatten(m: Module, input: List[Signal]) -> Signal:
     return flat
 
 
-def GetClockFreq(platform: Platform) -> int:
+def GetClockFreq(platform: Optional[Platform]) -> int:
+    """Get the clock frequency for the sync domain.
+
+    This is meant to provide a uniform API between synthesis and simulation.
+    When used in simulation, the simulation object should be given a clock of
+    test_util.SIMULATION_CLOCK_FREQUENCY.
+    """
     if platform is not None:
         return int(platform.default_clk_frequency)
     return test_util.SIMULATION_CLOCK_FREQUENCY
 
 
 class MultiplexError(Exception):
-    pass
+    """Logic error in the construction of NMux or Multiplex."""
 
 
 def NMux(select: Signal, signals: List[Signal]) -> Value:

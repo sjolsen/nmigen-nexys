@@ -1,3 +1,5 @@
+"""Command-based FSM generator for the Pmod OLED."""
+
 import abc
 from typing import Iterable, List, NamedTuple
 
@@ -12,6 +14,7 @@ from nmigen_nexys.display import ssd1306
 
 
 class Command(abc.ABC):
+    """Command base class consumed by Program."""
 
     def __init__(self):
         super().__init__()
@@ -22,27 +25,35 @@ class Command(abc.ABC):
 
     @property
     def state(self) -> str:
+        """Generate a human-readable label for use as an FSM string.
+
+        The state string contains the command's address, if set, and a
+        representation of the command object similar to what you'd write in
+        Python to construct it. See util.ProductRepr for details.
+        """
         addr = str(self.addr) if self.addr is not None else '<unknown>'
         return f'{addr}@{repr(self)}'
 
     def SetAddress(self, addr: int):
+        """Used internally to record the command's index in the program."""
         assert self.addr is None
         self.addr = addr
 
     @abc.abstractmethod
     def Start(self, ctx: 'Program.Context') -> Iterable[Assign]:
-        pass
+        """Sync macro to initiate the command."""
 
     @abc.abstractmethod
     def ReleaseStart(self, ctx: 'Program.Context') -> Iterable[Assign]:
-        pass
+        """Sync macro to release any strobe signals from Start."""
 
     @abc.abstractmethod
     def Poll(self, ctx: 'Program.Context') -> Value:
-        pass
+        """Value macro determine whether the command is complete."""
 
 
 class DigitalWrite(Command):
+    """Update the value of a flip-flop, e.g. one connected to an output pin."""
 
     def __init__(self, ff: flop.FF.Interface, value: Value):
         super().__init__()
@@ -61,6 +72,7 @@ class DigitalWrite(Command):
 
 
 class Delay(Command):
+    """Wait for a fixed number of cycles."""
 
     def __init__(self, cycles: int):
         super().__init__()
@@ -80,8 +92,9 @@ class Delay(Command):
 
 
 class WriteCommand(Command):
+    """Write a command to the SSD1306 controller."""
 
-    def __init__(self, data: bytes):
+    def __init__(self, data: ssd1306.Command):
         super().__init__()
         self.data = data
 
@@ -97,13 +110,15 @@ class WriteCommand(Command):
 
 
 class Program(Elaboratable):
+    """Convert a list of Commands into an FSM."""
 
     class Context(NamedTuple):
+        """Internal command execution context."""
         timer: timer_module.OneShot
-        controller: ssd1306.SSD1306.Interface
+        controller: ssd1306.Controller.Interface
 
     def __init__(self, commands: List[Command],
-                 controller: ssd1306.SSD1306.Interface):
+                 controller: ssd1306.Controller.Interface):
         super().__init__()
         assert len(commands) != 0
         for i, command in enumerate(commands):

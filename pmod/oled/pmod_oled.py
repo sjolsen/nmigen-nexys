@@ -15,6 +15,7 @@ from nmigen_nexys.pmod.oled import interpreter
 
 
 class PmodPins(Record):
+    """Pins as produced by PmodOLEDResource."""
 
     LAYOUT = Layout([
         ('cs', 1),
@@ -61,6 +62,7 @@ def PmodOLEDResource(n: int, conn: Tuple[str, int]) -> Resource:
 
 
 class PowerStatus(enum.IntEnum):
+    """Externally visible state of PowerSequencer."""
     OFF = 0
     POWERING_UP = 1
     READY = 2
@@ -68,9 +70,15 @@ class PowerStatus(enum.IntEnum):
 
 
 class PowerSequencer(Elaboratable):
+    """Power sequencer for the Pmod OLED module.
+
+    The module must be powered up before use. This sequencer handles the control
+    signals, time delays, and SPI commands needed to do this correctly. It also
+    implements a power-down sequence.
+    """
 
     def __init__(self, pins: Pins,
-                 controller: ssd1306.SSD1306.Interface,
+                 controller: ssd1306.Controller.Interface,
                  sim_logic_wait_us: Optional[numbers.Number] = None,
                  sim_vcc_wait_us: Optional[numbers.Number] = None):
         super().__init__()
@@ -98,7 +106,7 @@ class PowerSequencer(Elaboratable):
         vcc_delay = int((self._sim_vcc_wait_us or 100_000) * us)  # 100 ms
         # Use the interpreter to build the power sequence logic
         controllers = [
-            ssd1306.SSD1306.Interface(self.controller.max_bits)
+            ssd1306.Controller.Interface(self.controller.max_bits)
             for _ in range(2)
         ]
         m.d.comb += util.Multiplex(select, self.controller, controllers)

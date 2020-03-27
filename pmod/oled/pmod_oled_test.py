@@ -1,3 +1,5 @@
+"""Tests for nmigen_nexys.pmod.oled.pmod_oled."""
+
 from typing import List, Literal, NamedTuple, Tuple, Union
 import unittest
 
@@ -13,20 +15,24 @@ from nmigen_nexys.test import util
 
 
 def ByteFromBits(bits: List[int]) -> int:
+    """Big-endian bits-to-int convertion."""
     assert len(bits) == 8
     assert all(0 <= b <= 1 for b in bits)
     return sum(b * 2**i for i, b in enumerate(reversed(bits)))
 
 
 class CommandEvent(NamedTuple):
+    """Simulation event: command sent to controller."""
     byte: int
 
 
 class DataEvent(NamedTuple):
+    """Simulation event: data sent to controller."""
     byte: int
 
 
 class EdgeEvent(NamedTuple):
+    """Simulation event: GPIO toggled."""
     signal: str
     direction: Literal['rose', 'fell']
 
@@ -35,13 +41,14 @@ Event = Union[CommandEvent, DataEvent, EdgeEvent]
 
 
 class PowerSequenceTest(unittest.TestCase):
+    """Simulate and validate the power-sequencing logic."""
 
     TIMEOUT_S = 50e-6
 
     def test_up_down(self):
         m = Module()
         pins = pmod_oled.PmodPins()
-        m.submodules.controller = controller = ssd1306.SSD1306(
+        m.submodules.controller = controller = ssd1306.Controller(
             pins.ControllerBus(), max_data_bytes=0)
         m.submodules.sequencer = sequencer = pmod_oled.PowerSequencer(
             pins, controller.interface, sim_logic_wait_us=0.1,

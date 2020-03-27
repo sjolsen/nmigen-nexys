@@ -1,3 +1,5 @@
+"""Demo for https://store.digilentinc.com/pmod-oled-128-x-32-pixel-monochromatic-oled-display/."""
+
 from nmigen import *
 from nmigen.build import *
 
@@ -12,21 +14,26 @@ from nmigen_nexys.pmod.oled import pmod_oled
 
 
 class Demo(Elaboratable):
+    """Demo for the Digilent Pmod OLED.
+
+    This demo assumes the module is plugged into JC. It displays pseudo-random
+    data, similar to the noise you'd see on an old NTSC television.
+    """
 
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
         m.submodules.lfsr = lfsr = lfsr_module.Fibonacci(
-            polynomial=[24, 23, 22, 17, 1], seed=0x123456)
+            polynomial=[24, 23, 22, 17, 0], seed=0x123456)
         m.submodules.data = data = shift_register.Up(64)
         m.d.comb += data.bit_in.eq(lfsr.output)
         m.d.comb += data.shift.eq(1)
 
         pins = pmod_oled.PmodPins()
         m.d.comb += platform.request('pmod_oled', 0).eq(pins)
-        m.submodules.controller = controller = ssd1306.SSD1306(
+        m.submodules.controller = controller = ssd1306.Controller(
             pins.ControllerBus(), max_data_bytes=8)
         ifaces = [
-            ssd1306.SSD1306.Interface(controller.interface.max_bits)
+            ssd1306.Controller.Interface(controller.interface.max_bits)
             for _ in range(2)
         ]
         select = Signal(reset=0)

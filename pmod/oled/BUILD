@@ -39,7 +39,9 @@ py_test(
     srcs = ["pmod_oled_test.py"],
     deps = nmigen_sim_deps + [
         ":pmod_oled",
+        "//core:edge",
         "//display:ssd1306",
+        "//serial:spi",
         "//test:util",
     ],
 )

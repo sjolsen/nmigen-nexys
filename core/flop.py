@@ -1,14 +1,21 @@
+"""Basic flip-flop definitions."""
+
 from nmigen import *
 from nmigen.build import *
 from nmigen.hdl.rec import Direction, Layout, Record
 
 
 class FF(Elaboratable):
+    """Flip-flop with a muxable interface."""
 
     class Interface(Record):
+        """Muxable interface for nmigen_nexys.core.flop.FF."""
 
         def __init__(self, width: int, reset=None):
-            fields = {'q': Signal(width, reset=reset)} if reset is not None else None
+            if reset is not None:
+                fields = {'q': Signal(width, reset=reset)}
+            else:
+                fields = None
             super().__init__(Layout([
                 ('d', width, Direction.FANIN),
                 ('q', width, Direction.FANOUT),

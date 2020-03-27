@@ -25,8 +25,7 @@ class BinToBCDTest(unittest.TestCase):
             yield b2d.start.eq(1)
             yield  # Update input and start
             yield from util.WaitDone(b2d.done)
-            actual = []
-            yield from util.YieldList(b2d.output, actual)
+            actual = yield from util.YieldList(b2d.output)
             print(f'Input: {input}')
             print(f'Expected: {expected}')
             print(f'Actual: {actual}')

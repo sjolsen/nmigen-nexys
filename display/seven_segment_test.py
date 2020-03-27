@@ -35,8 +35,7 @@ class BCDRendererTest(unittest.TestCase):
             yield bcdr.start.eq(1)
             yield  # Update input and start
             yield from util.WaitDone(bcdr.done)
-            actual = []
-            yield from util.YieldList(bcdr.output, actual)
+            actual = yield from util.YieldList(bcdr.output)
             print(f'Input: {input}')
             print(f'Expected: {expected}')
             print(f'Actual: {actual}')

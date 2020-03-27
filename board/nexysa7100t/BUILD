@@ -89,6 +89,7 @@ nmigen_design(
     srcs = ["pmod_oled_demo.py"],
     deps = nmigen_deps + [
         ":nexysa7100t",
+        "//core:shift_register",
         "//core:timer",
         "//core:top",
         "//core:util",

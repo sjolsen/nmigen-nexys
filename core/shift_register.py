@@ -1,4 +1,4 @@
-"""Shift registers implementations."""
+"""Shift register implementations."""
 
 import abc
 

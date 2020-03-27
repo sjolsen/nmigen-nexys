@@ -140,7 +140,7 @@ class ContinuousHorizontalScrollSetup(Command):
             ...
             7: PAGE7
     """
-    
+
     def __init__(
             self,
             direction: Literal['right', 'left'],
@@ -373,6 +373,7 @@ class ChargePumpSetting(Command):
 
 
 class Bus(Record):
+    """Write-only SPI bus + data/command control line."""
 
     LAYOUT = Layout([
         ('dc', 1, Direction.FANOUT),
@@ -385,6 +386,7 @@ class Bus(Record):
         super().__init__(self.LAYOUT, fields=kwargs)
 
     def SPIBus(self) -> spi.Bus:
+        """Convert to a 10 MHz SPI bus handle."""
         return spi.Bus(
             cs_n=self.cs_n,
             clk=self.clk,
@@ -393,9 +395,11 @@ class Bus(Record):
             freq_Hz=10_000_000)
 
 
-class SSD1306(Elaboratable):
+class Controller(Elaboratable):
+    """SPI master controller for the SSD1306."""
 
     class Interface(Record):
+        """Muxable interface for nmigen_nexys.display.ssd1306.Controller."""
 
         def __init__(self, max_bits: int):
             super().__init__(Layout([
@@ -408,6 +412,7 @@ class SSD1306(Elaboratable):
             self.max_bits = max_bits
 
         def WriteData(self, data: Union[bytes, Signal], dc=1) -> Iterable[Assign]:
+            """Sync macro to stage data for transfer."""
             if isinstance(data, bytes):
                 data_size = 8 * len(data)
                 assert 0 < data_size <= self.data.width
@@ -420,6 +425,7 @@ class SSD1306(Elaboratable):
             yield self.data_size.eq(data_size)
 
         def WriteCommand(self, command: Command) -> Iterable[Assign]:
+            """Sync macro to stage a command for transfer."""
             yield from self.WriteData(command.data, dc=0)
 
     def __init__(self, bus: Bus, max_data_bytes: int):
