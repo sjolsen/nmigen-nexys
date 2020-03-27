@@ -1,4 +1,4 @@
-"""Shift registers implementations."""
+"""Shift register implementations."""
 
 import abc
 
@@ -14,9 +14,10 @@ class Register(Elaboratable):
     signal takes precedence over the shift signal.
     """
 
-    def __init__(self, width: int):
+    def __init__(self, width: int, reset: int = 0):
         super().__init__()
         self.width = width
+        self.reset = reset
         self.word_in = Signal(width)
         self.word_out = Signal(width)
         self.latch = Signal()
@@ -34,7 +35,7 @@ class Up(Register):
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
-        reg = Signal(self.width)
+        reg = Signal(self.width, reset=self.reset)
         m.d.comb += self.word_out.eq(reg)
         m.d.comb += self.bit_out.eq(reg[-1])
         with m.If(self.latch):
@@ -49,7 +50,7 @@ class Down(Register):
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
-        reg = Signal(self.width)
+        reg = Signal(self.width, reset=self.reset)
         m.d.comb += self.word_out.eq(reg)
         m.d.comb += self.bit_out.eq(reg[0])
         with m.If(self.latch):

@@ -1,20 +1,18 @@
 """Utilities for test and simulation."""
 
-from typing import ContextManager, Optional
-
-from nmigen.back.pysim import *
+import os
 
 
-def YieldList(l, result):
-    """Yield a list of signals into result.
+SIMULATION_CLOCK_FREQUENCY = 100_000_000
 
-    result should be empty on entry. This is an input parameter instead of the
-    return value because implementing YieldList as a generator makes the return
-    value unavailable.
-    """
+
+def YieldList(l):
+    """Yield a list of signals into result."""
+    result = []
     for x in l:
         y = yield x
         result.append(y)
+    return result
 
 
 def WaitDone(done):
@@ -22,7 +20,7 @@ def WaitDone(done):
     while True:
         x = yield done
         if x:
-            break
+            return x
         yield
 
 

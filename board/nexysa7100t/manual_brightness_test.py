@@ -35,7 +35,7 @@ class ConversionPipelineTest(unittest.TestCase):
         rdisp_flat = util.Flatten(m, conv.rdisp)
         ldisp_flat = util.Flatten(m, conv.ldisp)
         sim = Simulator(m)
-        sim.add_clock(1e-8)  # 100 MHz
+        sim.add_clock(1.0 / test_util.SIMULATION_CLOCK_FREQUENCY)
 
         def convert_one(rval: int, expected_rdisp: List[int],
                         expected_ldisp: List[int]):
@@ -43,10 +43,8 @@ class ConversionPipelineTest(unittest.TestCase):
             yield conv.lval.eq(2 * rval)
             yield  # Let conv automatically detect the update
             yield from test_util.WaitDone(conv.done)
-            actual_rdisp = []
-            yield from test_util.YieldList(conv.rdisp, actual_rdisp)
-            actual_ldisp = []
-            yield from test_util.YieldList(conv.ldisp, actual_ldisp)
+            actual_rdisp = yield from test_util.YieldList(conv.rdisp)
+            actual_ldisp = yield from test_util.YieldList(conv.ldisp)
             print(f'Input: {rval}')
             print(f'Expected: {expected_rdisp}, {expected_ldisp}')
             print(f'Actual: {actual_rdisp}, {actual_ldisp}')

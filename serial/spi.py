@@ -25,8 +25,8 @@ class Bus(Record):
     """Single-lane bidirectional SPI bus with chip select."""
 
     LAYOUT = Layout([
-        ('clk', 1),
         ('cs_n', 1),
+        ('clk', 1),
         ('mosi', 1),
         ('miso', 1),
     ])
@@ -58,14 +58,11 @@ class ClockEngine(Elaboratable):
     ends with the rising edge.
     """
 
-    def __init__(self, bus: Bus, polarity: Signal,
-                 sim_clk_freq: Optional[int] = None):
+    def __init__(self, bus: Bus, polarity: Signal):
         super().__init__()
         self.bus = bus
         self.polarity = polarity
         self.enable = Signal(reset=0)
-        # TODO: This shouldn't be necessary
-        self._sim_clk_freq = sim_clk_freq
 
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
@@ -77,9 +74,8 @@ class ClockEngine(Elaboratable):
         # Set up a timer to start when enable is asserted and run at twice the
         # bus frequency until the transaction ends
         m.submodules.en_edge = en_edge = edge.Detector(self.enable)
-        sync_clk_freq = self._sim_clk_freq or platform.default_clk_frequency
         m.submodules.hclk_timer = hclk_timer = timer.OneShot(
-            sync_clk_freq // (2 * self.bus.freq_Hz))
+            util.GetClockFreq(platform) // (2 * self.bus.freq_Hz))
         m.d.comb += hclk_timer.go.eq(
             en_edge.rose | (assert_cs & hclk_timer.triggered))
         with m.FSM(reset='IDLE'):
@@ -218,8 +214,7 @@ class ShiftMaster(Elaboratable):
             m.d.comb += util.Multiplex(self.select, self.root, self.interfaces)
             return m
 
-    def __init__(self, bus: Bus, register: shift_register.Register,
-                 sim_clk_freq: Optional[int] = None):
+    def __init__(self, bus: Bus, register: shift_register.Register):
         super().__init__()
         self.bus = bus
         self.register = register
@@ -227,14 +222,11 @@ class ShiftMaster(Elaboratable):
         self.polarity = Signal(reset=0)
         self.phase = Signal(reset=0)
         self.busy = Signal(reset=0)
-        # TODO: This shouldn't be necessary
-        self._sim_clk_freq = sim_clk_freq
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
         m.submodules.register = self.register
-        m.submodules.clk_eng = clk_eng = ClockEngine(self.bus, self.polarity,
-                                                     self._sim_clk_freq)
+        m.submodules.clk_eng = clk_eng = ClockEngine(self.bus, self.polarity)
         m.submodules.decoder = decoder = BusDecoder(
             self.bus, self.polarity, self.phase)
         remaining = Signal(self.interface.transfer_size.width)

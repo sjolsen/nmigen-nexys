@@ -16,5 +16,4 @@ py_binary(
 py_library(
     name = "util",
     srcs = ["util.py"],
-    deps = nmigen_deps,
 )

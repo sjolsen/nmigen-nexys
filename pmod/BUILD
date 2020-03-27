@@ -2,7 +2,10 @@ load(
     "@rules_python//python:defs.bzl",
     "py_library",
 )
-load("//core:top.bzl", "nmigen_deps")
+load(
+    "//core:top.bzl",
+    "nmigen_deps",
+)
 
 package(default_visibility = ["//visibility:public"])
 

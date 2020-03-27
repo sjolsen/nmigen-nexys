@@ -38,3 +38,13 @@ py_test(
         "//test:util",
     ],
 )
+
+py_library(
+    name = "ssd1306",
+    srcs = ["ssd1306.py"],
+    deps = nmigen_deps + [
+        "//core:shift_register",
+        "//core:util",
+        "//serial:spi",
+    ],
+)

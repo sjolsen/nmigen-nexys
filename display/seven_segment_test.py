@@ -27,7 +27,7 @@ class BCDRendererTest(unittest.TestCase):
         m.submodules.bcdr = bcdr = seven_segment.BCDRenderer(
             [Signal(4) for _ in input])
         sim = Simulator(m)
-        sim.add_clock(1e-8)  # 100 MHz
+        sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
         def convert():
             for sig, val in zip(bcdr.input, input):
@@ -35,8 +35,7 @@ class BCDRendererTest(unittest.TestCase):
             yield bcdr.start.eq(1)
             yield  # Update input and start
             yield from util.WaitDone(bcdr.done)
-            actual = []
-            yield from util.YieldList(bcdr.output, actual)
+            actual = yield from util.YieldList(bcdr.output)
             print(f'Input: {input}')
             print(f'Expected: {expected}')
             print(f'Actual: {actual}')

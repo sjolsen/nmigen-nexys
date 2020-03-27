@@ -18,15 +18,14 @@ class BinToBCDTest(unittest.TestCase):
             input=Signal(range(input + 1)),
             output=[Signal(4) for _ in expected])
         sim = Simulator(m)
-        sim.add_clock(1e-8)  # 100 MHz
+        sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
         def convert():
             yield b2d.input.eq(input)
             yield b2d.start.eq(1)
             yield  # Update input and start
             yield from util.WaitDone(b2d.done)
-            actual = []
-            yield from util.YieldList(b2d.output, actual)
+            actual = yield from util.YieldList(b2d.output)
             print(f'Input: {input}')
             print(f'Expected: {expected}')
             print(f'Actual: {actual}')
