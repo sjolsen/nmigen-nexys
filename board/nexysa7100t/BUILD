@@ -116,10 +116,20 @@ nmigen_design(
     srcs = ["uart_demo.py"],
     deps = nmigen_deps + [
         ":nexysa7100t",
-        "//core:timer",
         "//core:top",
-        "//core:util",
-        "//math:lut",
+        "//math:bcd",
         "//serial:uart",
+    ],
+)
+
+py_test(
+    name = "uart_demo_test",
+    size = "small",
+    srcs = ["uart_demo_test.py"],
+    deps = nmigen_sim_deps + [
+        ":uart_demo",
+        "//core:util",
+        "//serial:uart",
+        "//test:test_util",
     ],
 )

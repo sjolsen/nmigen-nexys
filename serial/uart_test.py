@@ -21,11 +21,12 @@ class TransmitTest(unittest.TestCase):
 
         def transmit():
             yield Passive()
-            yield tx.data.eq(ord('A'))
-            yield tx.start.eq(1)
-            yield
-            yield tx.start.eq(0)
-            yield from test_util.WaitSync(tx.done)
+            for _ in range(10):
+                yield tx.data.eq(ord('A'))
+                yield tx.start.eq(1)
+                yield
+                yield tx.start.eq(0)
+                yield from test_util.WaitSync(tx.done)
             yield tx_done.eq(1)
 
         def sampling_monitor():
@@ -37,22 +38,23 @@ class TransmitTest(unittest.TestCase):
 
         def receive():
             yield Passive()
-            # TODO: Use the equivalent of @negedge when it exists.
-            yield from test_util.WaitNegedge(tx.output)
-            period = 1 / 12_000_000
-            delta = period * 0.25
-            yield Delay(period / 2 - delta)
-            bits = []
-            for i in range(10):
-                yield sampling.eq(1)
-                yield Delay(delta)
-                bits.append((yield tx.output))
-                yield Delay(delta)
-                yield sampling.eq(0)
-                if i != 9:
-                    yield Delay(period - 2 * delta)
-            # START + 0x41 + STOP
-            self.assertEqual(bits, [0] + [1, 0, 0, 0, 0, 0, 1, 0] + [1])
+            for _ in range(10):
+                # TODO: Use the equivalent of @negedge when it exists.
+                yield from test_util.WaitNegedge(tx.output)
+                period = 1 / 12_000_000
+                delta = period * 0.25
+                yield Delay(period / 2 - delta)
+                bits = []
+                for i in range(10):
+                    yield sampling.eq(1)
+                    yield Delay(delta)
+                    bits.append((yield tx.output))
+                    yield Delay(delta)
+                    yield sampling.eq(0)
+                    if i != 9:
+                        yield Delay(period - 2 * delta)
+                # START + 0x41 + STOP
+                self.assertEqual(bits, [0] + [1, 0, 0, 0, 0, 0, 1, 0] + [1])
             yield rx_done.eq(1)
 
         def wait_done():
@@ -60,8 +62,8 @@ class TransmitTest(unittest.TestCase):
 
         def timeout():
             yield Passive()
-            yield Delay(1e-6)
-            self.fail('Timed out after 1 us')
+            yield Delay(10e-6)
+            self.fail('Timed out after 10 us')
 
         sim.add_sync_process(transmit)
         sim.add_process(sampling_monitor)
@@ -90,18 +92,20 @@ class ReceiveTest(unittest.TestCase):
 
         def transmit():
             yield Passive()
-            yield tx.data.eq(ord('A'))
-            yield tx.start.eq(1)
-            yield
-            yield tx.start.eq(0)
-            yield from test_util.WaitSync(tx.done)
+            for _ in range(10):
+                yield tx.data.eq(ord('A'))
+                yield tx.start.eq(1)
+                yield
+                yield tx.start.eq(0)
+                yield from test_util.WaitSync(tx.done)
             yield tx_done.eq(1)
 
         def receive():
             yield Passive()
-            yield from test_util.WaitSync(rx.start)
-            yield from test_util.WaitSync(rx.done)
-            self.assertEqual((yield rx.data), ord('A'))
+            for _ in range(10):
+                yield from test_util.WaitSync(rx.start)
+                yield from test_util.WaitSync(rx.done)
+                self.assertEqual((yield rx.data), ord('A'))
             yield rx_done.eq(1)
 
         def wait_done():
@@ -109,8 +113,8 @@ class ReceiveTest(unittest.TestCase):
 
         def timeout():
             yield Passive()
-            yield Delay(1e-6)
-            self.fail('Timed out after 1 us')
+            yield Delay(10e-6)
+            self.fail('Timed out after 10 us')
 
         sim.add_sync_process(transmit)
         sim.add_sync_process(receive)
@@ -120,7 +124,7 @@ class ReceiveTest(unittest.TestCase):
         os.makedirs(test_dir, exist_ok=True)
         with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
                            os.path.join(test_dir, "test.gtkw"),
-                           traces=[rx.start, rx.busy, rx.done, rx.data]):
+                           traces=[rx.input, rx.start, rx.done, rx.data]):
             sim.run()
 
 

@@ -2,67 +2,82 @@ from nmigen import *
 from nmigen.build import *
 
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
-from nmigen_nexys.core import timer as timer_module
 from nmigen_nexys.core import top
-from nmigen_nexys.core import util
-from nmigen_nexys.math import lut
+from nmigen_nexys.math import bcd
 from nmigen_nexys.serial import uart
 
 
-class ASCIILUT(Elaboratable):
+class ASCIIRenderer(Elaboratable):
 
-    def __init__(self, text: str):
+    # TODO: Base 10 needs 3 digits...
+    TEMPLATE = b"'X' = XX\r\n"
+
+    def __init__(self):
         super().__init__()
-        self.text = text
-        self.data = text.encode('ascii')
-        self.input = Signal(range(len(self.data)), reset=0)
-        self.output = Signal(7)
-
-    def _lookup(self, i: int) -> int:
-        if i < len(self.data):
-            return self.data[i]
-        else:
-            return 0
+        self.input = Signal(8)
+        self.output = [Signal(8) for _ in range(len(self.TEMPLATE))]
+        self.start = Signal()
+        self.done = Signal(reset=0)
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
-        m.submodules.byte_lut = lut.FunctionLUT(self._lookup, self.input,
-                                                self.output)
+        m.submodules.bin2bcd = bin2bcd = bcd.BinToBCD(
+            input=self.input, output=[Signal(4) for _ in range(2)])
+        m.d.comb += bin2bcd.start.eq(self.start)
+        m.d.comb += self.done.eq(bin2bcd.done)
+        for out, template in zip(self.output, self.TEMPLATE):
+            m.d.comb += out.eq(template)
+        m.d.comb += self.output[1].eq(self.input)
+        m.d.comb += self.output[6].eq(
+            Mux(bin2bcd.output[1], ord('0') | bin2bcd.output[1], ord(' ')))
+        m.d.comb += self.output[7].eq(ord('0') | bin2bcd.output[0])
         return m
 
 
+# TODO: It works... most of the time
 class UARTDemo(Elaboratable):
 
-    def elaborate(self, platform: Platform) -> Module:
+    def __init__(self, pins: Record):
+        super().__init__()
+        self.pins = pins
+
+    def elaborate(self, _: Platform) -> Module:
         m = Module()
-        pins = platform.request('uart')
-        m.d.comb += pins.rts.eq(pins.cts)
+        m.d.comb += self.pins.rts.eq(self.pins.cts)
 
-        m.submodules.timer = timer = timer_module.UpTimer(
-            util.GetClockFreq(platform))
-        m.submodules.text = text = ASCIILUT('Hello, world!\r\n')
-        m.submodules.tx = tx = uart.Transmit(12_000_000)
-        m.d.comb += tx.data.eq(text.output)
-        m.d.comb += pins.tx.eq(tx.output)
+        baud_rate = 12_000_000
+        m.submodules.tx = tx = uart.Transmit(baud_rate)
+        m.submodules.rx = rx = uart.Receive(baud_rate)
+        m.d.comb += self.pins.tx.eq(tx.output)
+        m.d.comb += rx.input.eq(self.pins.rx)
 
+        m.submodules.render = render = ASCIIRenderer()
+        output = Signal(8 * len(render.output))
+        m.d.comb += tx.data.eq(output[0:8])
+
+        m.d.sync += render.start.eq(0)  # default
         m.d.sync += tx.start.eq(0)  # default
-        with m.FSM(reset='START'):
-            with m.State('START'):
-                m.d.sync += text.input.eq(0)
-                m.d.sync += tx.start.eq(1)
-                m.next = 'PRINT'
-            with m.State('PRINT'):
+        with m.FSM(reset='IDLE'):
+            with m.State('IDLE'):
+                with m.If(rx.done):
+                    m.d.sync += render.input.eq(rx.data)
+                    m.d.sync += render.start.eq(1)
+                    m.next = 'RENDER'
+            with m.State('RENDER'):
+                with m.If(render.done):
+                    m.d.sync += output.eq(Cat(*render.output))
+                    m.d.sync += tx.start.eq(1)
+                    m.next = 'TRANSMIT'
+            with m.State('TRANSMIT'):
                 with m.If(tx.done):
-                    with m.If(text.input < len(text.data) - 1):
-                        m.d.sync += text.input.eq(text.input + 1)
+                    with m.If(output[8:24].any()):
+                        m.d.sync += output.eq(output >> 8)
                         m.d.sync += tx.start.eq(1)
                     with m.Else():
                         m.next = 'IDLE'
-            with m.State('IDLE'):
-                with m.If(timer.triggered):
-                    m.next = 'START'
         return m
 
 
 if __name__ == "__main__":
-    top.main(nexysa7100t.NexysA7100TPlatform(), UARTDemo())
+    platform = nexysa7100t.NexysA7100TPlatform()
+    top.main(platform, UARTDemo(pins=platform.request('uart')))
