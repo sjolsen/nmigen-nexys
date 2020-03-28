@@ -78,6 +78,23 @@ class UARTDemo(Elaboratable):
         return m
 
 
+class UARTDemoDebug(UARTDemo):
+
+    def elaborate(self, platform: Platform) -> Module:
+        m = super().elaborate(platform)
+        debug = platform.request('debug')
+        m.d.comb += debug.tx.eq(self.pins.tx)
+        m.d.comb += debug.rx.eq(self.pins.rx)
+        return m
+
+
 if __name__ == "__main__":
     platform = nexysa7100t.NexysA7100TPlatform()
-    top.main(platform, UARTDemo(pins=platform.request('uart')))
+    platform.add_resources([
+        Resource(
+            'debug', 0,
+            Subsignal('tx', Pins('1', conn=('pmod', 3), dir='o')),
+            Subsignal('rx', Pins('2', conn=('pmod', 3), dir='o')),
+            Attrs(IOSTANDARD="LVCMOS33")),
+    ])
+    top.main(platform, UARTDemoDebug(pins=platform.request('uart')))
