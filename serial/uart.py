@@ -32,14 +32,14 @@ class Transmit(Elaboratable):
         m.d.comb += self.output.eq(symbols.bit_out)
         remaining = Signal(range(10 + 1))
 
-        m.d.sync += timer.reload.eq(0)  # default
+        m.d.comb += timer.reload.eq(0)  # default
         m.d.comb += symbols.latch.eq(0)  # default
         m.d.sync += self.done.eq(0)  # default
         with m.FSM(reset='IDLE'):
             with m.State('IDLE'):
                 with m.If(self.start):
                     m.d.sync += self.busy.eq(1)
-                    m.d.sync += timer.reload.eq(1)
+                    m.d.comb += timer.reload.eq(1)
                     m.d.comb += symbols.latch.eq(1)
                     m.d.sync += remaining.eq(10)
                     m.next = 'RUN'
