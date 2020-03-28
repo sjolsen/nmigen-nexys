@@ -117,7 +117,6 @@ nmigen_design(
     deps = nmigen_deps + [
         ":nexysa7100t",
         "//core:top",
-        "//math:bcd",
         "//serial:uart",
     ],
 )

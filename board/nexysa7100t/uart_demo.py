@@ -3,14 +3,15 @@ from nmigen.build import *
 
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
 from nmigen_nexys.core import top
-from nmigen_nexys.math import bcd
 from nmigen_nexys.serial import uart
 
 
 class ASCIIRenderer(Elaboratable):
 
-    # TODO: Base 10 needs 3 digits...
-    TEMPLATE = b"'X' = XX\r\n"
+    TEMPLATE = b"'X' = 0xXX\r\n"
+
+    def _hexdigit(self, x: Value) -> Value:
+        return Mux(x < 10, ord('0') | x, ord('@') | (x - 9))
 
     def __init__(self):
         super().__init__()
@@ -21,16 +22,12 @@ class ASCIIRenderer(Elaboratable):
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
-        m.submodules.bin2bcd = bin2bcd = bcd.BinToBCD(
-            input=self.input, output=[Signal(4) for _ in range(2)])
-        m.d.comb += bin2bcd.start.eq(self.start)
-        m.d.comb += self.done.eq(bin2bcd.done)
+        m.d.comb += self.done.eq(self.start)
         for out, template in zip(self.output, self.TEMPLATE):
             m.d.comb += out.eq(template)
         m.d.comb += self.output[1].eq(self.input)
-        m.d.comb += self.output[6].eq(
-            Mux(bin2bcd.output[1], ord('0') | bin2bcd.output[1], ord(' ')))
-        m.d.comb += self.output[7].eq(ord('0') | bin2bcd.output[0])
+        m.d.comb += self.output[8].eq(self._hexdigit(self.input[4:8]))
+        m.d.comb += self.output[9].eq(self._hexdigit(self.input[0:4]))
         return m
 
 

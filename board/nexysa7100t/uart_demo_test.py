@@ -57,7 +57,7 @@ class UARTDemoTest(unittest.TestCase):
 
         def timeout():
             yield Passive()
-            us = 10 * runs
+            us = 12 * runs
             yield Delay(us * 1e-6)
             self.fail(f'Timed out after {us} us')
 
@@ -73,16 +73,16 @@ class UARTDemoTest(unittest.TestCase):
             sim.run()
 
     def test_nul(self):
-        self._run_test('\0', b"'\0' =  0\r\n")
+        self._run_test('\0', b"'\0' = 0x00\r\n")
 
     def test_tab(self):
-        self._run_test('\t', b"'\t' =  9\r\n")
+        self._run_test('\t', b"'\t' = 0x09\r\n")
 
     def test_A(self):
-        self._run_test('A', b"'A' = 65\r\n")
+        self._run_test('A', b"'A' = 0x41\r\n")
 
     def test_a(self):
-        self._run_test('a', b"'a' = 97\r\n", runs=10)
+        self._run_test('a', b"'a' = 0x61\r\n", runs=10)
 
 
 if __name__ == '__main__':
