@@ -2,6 +2,7 @@ import fractions
 
 from nmigen import *
 from nmigen.build import *
+from nmigen.lib.cdc import *
 
 from nmigen_nexys.core import edge
 from nmigen_nexys.core import shift_register
@@ -67,17 +68,20 @@ class Receive(Elaboratable):
 
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
+        input_sync = Signal()
+        m.submodules.input_synchronizer = FFSynchronizer(
+            i=self.input, o=input_sync, reset=1)
         m.submodules.timer = timer = timer_module.UpTimer(
             period=fractions.Fraction(util.GetClockFreq(platform),
                                       2 * self.baud_rate))
         m.submodules.symbols = symbols = shift_register.Down(10)
-        m.submodules.in_edge = in_edge = edge.Detector(self.input)
+        m.submodules.in_edge = in_edge = edge.Detector(input_sync)
         remaining = Signal(range(19 + 1))
         sample = timer.triggered & remaining[0]
         m.d.comb += self.start.eq(in_edge.fell & ~self.busy)
         m.d.comb += timer.reload.eq(self.start)
         m.d.comb += self.data.eq(symbols.word_out[1:-1])
-        m.d.comb += symbols.bit_in.eq(self.input)
+        m.d.comb += symbols.bit_in.eq(input_sync)
         m.d.comb += symbols.shift.eq(self.busy & sample)
 
         m.d.sync += self.done.eq(0)  # default
