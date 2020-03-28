@@ -1,5 +1,6 @@
 """Demo for https://store.digilentinc.com/pmod-8ld-eight-high-brightness-leds/."""
 
+from absl import app
 from nmigen import *
 from nmigen.build import *
 
@@ -39,10 +40,13 @@ class Demo(Elaboratable):
         return m
 
 
-if __name__ == "__main__":
+def main(_):
     platform = nexysa7100t.NexysA7100TPlatform()
     platform.add_resources([
         pmod_8ld.Pmod8LDResource(0, conn=('pmod', 0)),
         pmod_8ld.Pmod8LDResource(1, conn=('pmod', 1)),
     ])
-    top.main(platform, Demo())
+    top.build(platform, Demo())
+
+if __name__ == "__main__":
+    app.run(main)

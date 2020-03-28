@@ -9,7 +9,8 @@ from nmigen.hdl.ast import Assign
 from nmigen.hdl.rec import Direction, Layout, Record
 from nmigen.utils import log2_int
 
-from nmigen_nexys.test import util as test_util
+
+SIMULATION_CLOCK_FREQUENCY = 100_000_000
 
 
 def ProductRepr(obj: object) -> str:
@@ -97,16 +98,20 @@ def Flatten(m: Module, input: List[Signal]) -> Signal:
     return flat
 
 
+def Any(values: Iterable[Value]) -> Value:
+    return Cat(*values).any()
+
+
 def GetClockFreq(platform: Optional[Platform]) -> int:
     """Get the clock frequency for the sync domain.
 
     This is meant to provide a uniform API between synthesis and simulation.
     When used in simulation, the simulation object should be given a clock of
-    test_util.SIMULATION_CLOCK_FREQUENCY.
+    SIMULATION_CLOCK_FREQUENCY.
     """
     if platform is not None:
         return int(platform.default_clk_frequency)
-    return test_util.SIMULATION_CLOCK_FREQUENCY
+    return SIMULATION_CLOCK_FREQUENCY
 
 
 class MultiplexError(Exception):

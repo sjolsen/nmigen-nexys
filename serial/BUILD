@@ -31,6 +31,28 @@ py_test(
         "//core:edge",
         "//core:shift_register",
         "//core:util",
-        "//test:util",
+        "//test:test_util",
+    ],
+)
+
+py_library(
+    name = "uart",
+    srcs = ["uart.py"],
+    deps = nmigen_deps + [
+        "//core:edge",
+        "//core:shift_register",
+        "//core:timer",
+        "//core:util",
+    ],
+)
+
+py_test(
+    name = "uart_test",
+    size = "small",
+    srcs = ["uart_test.py"],
+    deps = nmigen_sim_deps + [
+        ":uart",
+        "//core:util",
+        "//test:test_util",
     ],
 )

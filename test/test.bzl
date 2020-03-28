@@ -66,7 +66,7 @@ def elaboration_test(name = None, top = None, *args, **kwargs):
     """Validate that nMigen can elaborate a design.
     
     This requires that the design be implemented using
-    nmigen_nexys.core.top.main. This sets up the command-line flags that allow
+    nmigen_nexys.core.top.build. This sets up the command-line flags that allow
     the test to control build options. Rather than using this directly, use
     nmigen_design defined in //core:top.bzl, which automatically creates an
     elaboration test.

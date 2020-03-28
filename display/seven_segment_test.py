@@ -5,8 +5,9 @@ import unittest
 from nmigen import *
 from nmigen.back.pysim import *
 
+from nmigen_nexys.core import util
 from nmigen_nexys.display import seven_segment
-from nmigen_nexys.test import util
+from nmigen_nexys.test import test_util
 
 
 BLANK = 0
@@ -34,8 +35,8 @@ class BCDRendererTest(unittest.TestCase):
                 yield sig.eq(val)
             yield bcdr.start.eq(1)
             yield  # Update input and start
-            yield from util.WaitDone(bcdr.done)
-            actual = yield from util.YieldList(bcdr.output)
+            yield from test_util.WaitSync(bcdr.done)
+            actual = yield from test_util.YieldList(bcdr.output)
             print(f'Input: {input}')
             print(f'Expected: {expected}')
             print(f'Actual: {actual}')

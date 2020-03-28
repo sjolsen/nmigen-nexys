@@ -1,48 +1,79 @@
 """Simple timer implementations."""
 
+import numbers
 from typing import Union
 
 from nmigen import *
 from nmigen.build import *
 
+from nmigen_nexys.core import util
+
+
+def _DivvyRational(q: numbers.Rational):
+    """Computes the trigger periods for DownTimer and UpTimer."""
+    assert isinstance(q, numbers.Rational)  # TODO: Real type-checking
+    assert q >= 1
+    result = [int(round(i * q)) for i in range(q.denominator)]
+    assert len(set(result)) == len(result)
+    return result
+
 
 class DownTimer(Elaboratable):
-    """Down-counting, self-reloading, free-running timer.
+    """Down-counting, self-reloading timer.
 
-    The timer triggers at the end of the cycle.
+    The timer triggers at the end of the cycle. For rational, non-integer
+    periods, multiple approximately equal cycles are set up along the duration
+    of the counter. For integer periods, this degenerates to a single cycle
+    running from period - 1 down to zero.
     """
 
-    def __init__(self, period: int):
+    def __init__(self, period: numbers.Rational):
         super().__init__()
         self.period = period
-        self.counter = Signal(range(self.period), reset=self.period - 1)
+        self.reload = Signal(reset=0)
+        self.counter = Signal(range(self.period.numerator),
+                              reset=self.period.numerator - 1)
         self.triggered = Signal()
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
-        counter = self.counter
-        m.d.comb += self.triggered.eq(counter == 0)
-        m.d.sync += counter.eq(Mux(self.triggered, counter.reset, counter - 1))
+        triggers = _DivvyRational(self.period)
+        m.d.comb += self.triggered.eq(
+            util.Any(self.counter == t for t in triggers))
+        with m.If(self.reload | (self.counter == 0)):
+            m.d.sync += self.counter.eq(self.counter.reset)
+        with m.Else():
+            m.d.sync += self.counter.eq(self.counter - 1)
         return m
 
 
 class UpTimer(Elaboratable):
-    """Up-counting, self-reloading, free-running timer.
+    """Up-counting, self-reloading timer.
 
-    The timer triggers at the end of the cycle.
+    The timer triggers at the end of the cycle. For rational, non-integer
+    periods, multiple approximately equal cycles are set up along the duration
+    of the counter. For integer periods, this degenerates to a single cycle
+    running from zero up to period - 1.
     """
 
-    def __init__(self, period: int):
+    def __init__(self, period: numbers.Rational):
         super().__init__()
         self.period = period
-        self.counter = Signal(range(self.period), reset=0)
+        self.reload = Signal(reset=0)
+        self.counter = Signal(range(self.period.numerator), reset=0)
         self.triggered = Signal()
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
-        counter = self.counter
-        m.d.comb += self.triggered.eq(counter == self.period - 1)
-        m.d.sync += counter.eq(Mux(self.triggered, counter.reset, counter + 1))
+        triggers = [
+            self.period.numerator - 1 - t for t in _DivvyRational(self.period)
+        ]
+        m.d.comb += self.triggered.eq(
+            util.Any(self.counter == t for t in triggers))
+        with m.If(self.reload | (self.counter == self.period.numerator - 1)):
+            m.d.sync += self.counter.eq(self.counter.reset)
+        with m.Else():
+            m.d.sync += self.counter.eq(self.counter + 1)
         return m
 
 

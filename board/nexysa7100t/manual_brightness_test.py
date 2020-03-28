@@ -9,7 +9,7 @@ from nmigen.back.pysim import *
 from nmigen_nexys.board.nexysa7100t import manual_brightness
 from nmigen_nexys.core import util
 from nmigen_nexys.display import seven_segment
-from nmigen_nexys.test import util as test_util
+from nmigen_nexys.test import test_util
 
 
 BLANK = 0
@@ -35,14 +35,14 @@ class ConversionPipelineTest(unittest.TestCase):
         rdisp_flat = util.Flatten(m, conv.rdisp)
         ldisp_flat = util.Flatten(m, conv.ldisp)
         sim = Simulator(m)
-        sim.add_clock(1.0 / test_util.SIMULATION_CLOCK_FREQUENCY)
+        sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
         def convert_one(rval: int, expected_rdisp: List[int],
                         expected_ldisp: List[int]):
             yield conv.rval.eq(rval)
             yield conv.lval.eq(2 * rval)
             yield  # Let conv automatically detect the update
-            yield from test_util.WaitDone(conv.done)
+            yield from test_util.WaitSync(conv.done)
             actual_rdisp = yield from test_util.YieldList(conv.rdisp)
             actual_ldisp = yield from test_util.YieldList(conv.ldisp)
             print(f'Input: {rval}')

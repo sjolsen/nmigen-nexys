@@ -1,5 +1,6 @@
 """Demo for https://store.digilentinc.com/pmod-oled-128-x-32-pixel-monochromatic-oled-display/."""
 
+from absl import app
 from nmigen import *
 from nmigen.build import *
 
@@ -68,9 +69,12 @@ class Demo(Elaboratable):
         return m
 
 
-if __name__ == "__main__":
+def main(_):
     platform = nexysa7100t.NexysA7100TPlatform()
     platform.add_resources([
         pmod_oled.PmodOLEDResource(0, conn=('pmod', 2)),
     ])
-    top.main(platform, Demo())
+    top.build(platform, Demo())
+
+if __name__ == "__main__":
+    app.run(main)
