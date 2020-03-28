@@ -5,7 +5,7 @@ load("@rules_python//python:defs.bzl", "py_binary")
 load("//test:test.bzl", "elaboration_test")
 
 def nmigen_design(name = None, size = None, *args, **kwargs):
-    """An nMigen design using nmigen_nexys.core.top.main.
+    """An nMigen design using nmigen_nexys.core.top.build.
 
     This macro creates a simple py_binary for the design. It also automatically
     creates an elaboration test named "%{name}.elaborate".

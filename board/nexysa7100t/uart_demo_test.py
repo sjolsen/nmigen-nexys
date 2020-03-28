@@ -1,3 +1,5 @@
+"""Tests for nmigen_nexys.board.nexysa7100t.uart_demo."""
+
 import unittest
 
 from nmigen import *
@@ -11,6 +13,7 @@ from nmigen_nexys.test import test_util
 
 
 class UARTDemoTest(unittest.TestCase):
+    """Test the response data for several possible inputs."""
 
     def _run_test(self, c: str, expected: bytes, runs: int = 1):
         m = Module()
@@ -82,7 +85,7 @@ class UARTDemoTest(unittest.TestCase):
         self._run_test('A', b"'A' = 0x41\r\n")
 
     def test_a(self):
-        self._run_test('a', b"'a' = 0x61\r\n", runs=10)
+        self._run_test('a', b"'a' = 0x61\r\n")
 
 
 if __name__ == '__main__':

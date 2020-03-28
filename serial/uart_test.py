@@ -1,3 +1,5 @@
+"""Tests for nmigen_nexys.serial.uart."""
+
 import unittest
 
 from nmigen import *
@@ -9,6 +11,7 @@ from nmigen_nexys.test import test_util
 
 
 class TransmitTest(unittest.TestCase):
+    """Tests the transmitter against an unclocked pure-simulation receiver."""
 
     def test_transmit(self):
         m = Module()
@@ -79,6 +82,7 @@ class TransmitTest(unittest.TestCase):
 
 
 class ReceiveTest(unittest.TestCase):
+    """Tests the receiver against the transmitter implementation."""
 
     def test_transmit(self):
         m = Module()

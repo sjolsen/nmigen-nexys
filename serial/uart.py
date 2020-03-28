@@ -1,3 +1,5 @@
+"""Basic UART frontend implementations."""
+
 import fractions
 
 from nmigen import *
@@ -11,6 +13,11 @@ from nmigen_nexys.core import util
 
 
 class Transmit(Elaboratable):
+    """UART transmitter implementation.
+
+    This transmitter runs at a fixed baud rate and operates on one byte at a
+    time. Any data queueing must be handled by and external FIFO.
+    """
 
     def __init__(self, baud_rate: int):
         super().__init__()
@@ -55,6 +62,11 @@ class Transmit(Elaboratable):
 
 
 class Receive(Elaboratable):
+    """UART receiver implementation.
+
+    This receiver runs at a fixed baud rate and operates on one byte at a time.
+    Any data queueing must be handled by and external FIFO.
+    """
 
     def __init__(self, baud_rate: int):
         super().__init__()

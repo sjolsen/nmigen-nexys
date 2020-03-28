@@ -6,6 +6,7 @@ load(
 )
 load(
     "//core:top.bzl",
+    "absl_deps",
     "nmigen_deps",
     "nmigen_design",
     "nmigen_sim_deps",
@@ -17,7 +18,7 @@ nmigen_design(
     name = "demo",
     size = "small",
     srcs = ["demo.py"],
-    deps = nmigen_deps + [
+    deps = absl_deps + nmigen_deps + [
         ":nexysa7100t",
         "//color:srgb",
         "//core:pwm",
@@ -40,7 +41,7 @@ nmigen_design(
     name = "manual_brightness_demo",
     size = "small",
     srcs = ["manual_brightness_demo.py"],
-    deps = nmigen_deps + [
+    deps = absl_deps + nmigen_deps + [
         ":manual_brightness",
         ":nexysa7100t",
         "//color:srgb",
@@ -65,7 +66,7 @@ nmigen_design(
     name = "nexysa7100t",
     size = "small",
     srcs = ["nexysa7100t.py"],
-    deps = nmigen_deps + [
+    deps = absl_deps + nmigen_deps + [
         "//core:top",
         requirement("nmigen-boards"),
     ],
@@ -75,7 +76,7 @@ nmigen_design(
     name = "pmod_8ld_demo",
     size = "small",
     srcs = ["pmod_8ld_demo.py"],
-    deps = nmigen_deps + [
+    deps = absl_deps + nmigen_deps + [
         ":nexysa7100t",
         "//core:timer",
         "//core:top",
@@ -87,7 +88,7 @@ nmigen_design(
     name = "pmod_oled_demo",
     size = "small",
     srcs = ["pmod_oled_demo.py"],
-    deps = nmigen_deps + [
+    deps = absl_deps + nmigen_deps + [
         ":nexysa7100t",
         "//core:shift_register",
         "//core:timer",
@@ -103,7 +104,7 @@ nmigen_design(
     name = "seven_segment_demo",
     size = "small",
     srcs = ["seven_segment_demo.py"],
-    deps = nmigen_deps + [
+    deps = absl_deps + nmigen_deps + [
         ":nexysa7100t",
         "//core:top",
         "//display:seven_segment",
@@ -114,7 +115,7 @@ nmigen_design(
     name = "uart_demo",
     size = "small",
     srcs = ["uart_demo.py"],
-    deps = nmigen_deps + [
+    deps = absl_deps + nmigen_deps + [
         ":nexysa7100t",
         "//core:top",
         "//serial:uart",

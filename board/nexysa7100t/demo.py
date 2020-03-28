@@ -1,5 +1,6 @@
 """Simple demo for the Nexys A7-100T."""
 
+from absl import app
 from nmigen import *
 from nmigen.build import *
 
@@ -48,5 +49,8 @@ class Demo(Elaboratable):
         return m
 
 
+def main(_):
+    top.build(nexysa7100t.NexysA7100TPlatform(), Demo())
+
 if __name__ == "__main__":
-    top.main(nexysa7100t.NexysA7100TPlatform(), Demo())
+    app.run(main)

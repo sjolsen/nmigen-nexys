@@ -1,5 +1,6 @@
 """Demo for comparing gamma LUTS."""
 
+from absl import app
 from nmigen import *
 from nmigen.build import *
 from nmigen.hdl.rec import *
@@ -63,5 +64,8 @@ class ManualBrightness(Elaboratable):
         return m
 
 
+def main(_):
+    top.build(nexysa7100t.NexysA7100TPlatform(), ManualBrightness())
+
 if __name__ == "__main__":
-    top.main(nexysa7100t.NexysA7100TPlatform(), ManualBrightness())
+    app.run(main)

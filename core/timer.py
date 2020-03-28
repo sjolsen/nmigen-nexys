@@ -10,6 +10,7 @@ from nmigen_nexys.core import util
 
 
 def _DivvyRational(q: numbers.Rational):
+    """Computes the trigger periods for DownTimer and UpTimer."""
     assert isinstance(q, numbers.Rational)  # TODO: Real type-checking
     assert q >= 1
     result = [int(round(i * q)) for i in range(q.denominator)]
@@ -18,9 +19,12 @@ def _DivvyRational(q: numbers.Rational):
 
 
 class DownTimer(Elaboratable):
-    """Down-counting, self-reloading, free-running timer.
+    """Down-counting, self-reloading timer.
 
-    The timer triggers at the end of the cycle.
+    The timer triggers at the end of the cycle. For rational, non-integer
+    periods, multiple approximately equal cycles are set up along the duration
+    of the counter. For integer periods, this degenerates to a single cycle
+    running from period - 1 down to zero.
     """
 
     def __init__(self, period: numbers.Rational):
@@ -44,9 +48,12 @@ class DownTimer(Elaboratable):
 
 
 class UpTimer(Elaboratable):
-    """Up-counting, self-reloading, free-running timer.
+    """Up-counting, self-reloading timer.
 
-    The timer triggers at the end of the cycle.
+    The timer triggers at the end of the cycle. For rational, non-integer
+    periods, multiple approximately equal cycles are set up along the duration
+    of the counter. For integer periods, this degenerates to a single cycle
+    running from zero up to period - 1.
     """
 
     def __init__(self, period: numbers.Rational):
