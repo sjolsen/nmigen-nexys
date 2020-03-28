@@ -12,7 +12,7 @@ from nmigen_nexys.test import test_util
 
 class UARTDemoTest(unittest.TestCase):
 
-    def _run_test(self, c: str, expected: bytes):
+    def _run_test(self, c: str, expected: bytes, runs: int = 1):
         m = Module()
         pins = Record(Layout([
             ('rx', 1, Direction.FANIN),
@@ -25,37 +25,41 @@ class UARTDemoTest(unittest.TestCase):
         m.submodules.demo = uart_demo.UARTDemo(pins)
         m.d.comb += pins.rx.eq(tx.output)
         m.d.comb += rx.input.eq(pins.tx)
-        tx_done = Signal()
-        rx_done = Signal()
+        tx_done = Signal(range(runs + 1))
+        rx_done = Signal(range(runs + 1))
         sim = Simulator(m)
         sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
         def transmit():
             yield Passive()
-            yield tx.data.eq(ord(c))
-            yield tx.start.eq(1)
-            yield
-            yield tx.start.eq(0)
-            yield from test_util.WaitSync(tx.done)
-            yield tx_done.eq(1)
+            for i in range(runs):
+                yield from test_util.WaitSync(rx_done >= i)
+                yield tx.data.eq(ord(c))
+                yield tx.start.eq(1)
+                yield
+                yield tx.start.eq(0)
+                yield from test_util.WaitSync(tx.done)
+                yield tx_done.eq(tx_done + 1)
 
         def receive():
             yield Passive()
-            data = bytearray()
-            for _ in range(len(expected)):
-                yield from test_util.WaitSync(rx.start)
-                yield from test_util.WaitSync(rx.done)
-                data.append((yield rx.data))
-            self.assertEqual(data, expected)
-            yield rx_done.eq(1)
+            for _ in range(runs):
+                data = bytearray()
+                for _ in range(len(expected)):
+                    yield from test_util.WaitSync(rx.start)
+                    yield from test_util.WaitSync(rx.done)
+                    data.append((yield rx.data))
+                self.assertEqual(data, expected)
+                yield rx_done.eq(rx_done + 1)
 
         def wait_done():
-            yield from test_util.WaitSync(tx_done & rx_done)
+            yield from test_util.WaitSync((tx_done == runs) & (rx_done == runs))
 
         def timeout():
             yield Passive()
-            yield Delay(15e-6)
-            self.fail('Timed out after 15 us')
+            us = 10 * runs
+            yield Delay(us * 1e-6)
+            self.fail(f'Timed out after {us} us')
 
         sim.add_sync_process(transmit)
         sim.add_sync_process(receive)
@@ -78,7 +82,7 @@ class UARTDemoTest(unittest.TestCase):
         self._run_test('A', b"'A' = 65\r\n")
 
     def test_a(self):
-        self._run_test('a', b"'a' = 97\r\n")
+        self._run_test('a', b"'a' = 97\r\n", runs=10)
 
 
 if __name__ == '__main__':
