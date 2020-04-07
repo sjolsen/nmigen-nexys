@@ -71,7 +71,10 @@ class SimPerfTest(unittest.TestCase):
         sim.add_process(timeout)
         test_dir = test_util.BazelTestOutput(self.id())
         os.makedirs(test_dir, exist_ok=True)
-        sim.run()
+        with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
+                           os.path.join(test_dir, "test.gtkw"),
+                           traces=[tx.output, rx.input]):
+            sim.run()
 
     def test_sim(self):
         test = r"""self._run_test('a', b"'a' = 0x61\r\n", runs=100)"""
