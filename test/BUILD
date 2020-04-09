@@ -46,6 +46,5 @@ py_binary(
     deps = [
         "//pip:absl",
         "//pip:pytype",
-        "@rules_python//python/runfiles",
     ],
 )

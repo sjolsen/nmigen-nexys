@@ -136,6 +136,10 @@ def __pytype_check(target, ctx):
         args.add("--input", src)
         args.add("--output", output)
         args.add("--imports", ",".join(imports))
+        if '_type_check' in ctx.rule.attr.tags:
+            args.add("--action", "check")
+        else:
+            args.add("--action", "infer")
         ctx.actions.run(
             executable = ctx.executable._type_check,
             arguments = [args],
