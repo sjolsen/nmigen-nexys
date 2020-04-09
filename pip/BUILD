@@ -44,6 +44,11 @@ py_library(
 )
 
 py_library(
+    name = "pytype",
+    deps = [requirement("pytype")],
+)
+
+py_library(
     name = "pyvcd",
     deps = [
         ":six",

@@ -39,3 +39,13 @@ py_library(
         "//pip:nmigen",
     ],
 )
+
+py_binary(
+    name = "type_check",
+    srcs = ["type_check.py"],
+    deps = [
+        "//pip:absl",
+        "//pip:pytype",
+        "@rules_python//python/runfiles",
+    ],
+)

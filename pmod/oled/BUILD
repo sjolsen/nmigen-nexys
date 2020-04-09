@@ -1,3 +1,4 @@
+load("//test:test.bzl", "pytype_library")
 load(
     "@rules_python//python:defs.bzl",
     "py_library",
@@ -18,7 +19,7 @@ py_library(
     ],
 )
 
-py_library(
+pytype_library(
     name = "pmod_oled",
     srcs = ["pmod_oled.py"],
     deps = [
