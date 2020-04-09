@@ -1,8 +1,11 @@
 """Tests for nmigen_nexys.board.nexysa7100t.uart_demo."""
 
+import contextlib
 import cProfile
 import unittest
 
+from absl import app
+from absl import flags
 from nmigen import *
 from nmigen.back.pysim import *
 from nmigen.hdl.rec import *
@@ -11,6 +14,11 @@ from nmigen_nexys.board.nexysa7100t import uart_demo
 from nmigen_nexys.core import util
 from nmigen_nexys.serial import uart
 from nmigen_nexys.test import test_util
+
+flags.DEFINE_boolean('vcd', False, 'Generate VCD/GTKW output')
+flags.DEFINE_integer('runs', 100, 'Number of test iterations to profile')
+
+FLAGS = flags.FLAGS
 
 
 class SimPerfTest(unittest.TestCase):
@@ -71,17 +79,20 @@ class SimPerfTest(unittest.TestCase):
         sim.add_process(timeout)
         test_dir = test_util.BazelTestOutput(self.id())
         os.makedirs(test_dir, exist_ok=True)
-        with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
-                           os.path.join(test_dir, "test.gtkw"),
-                           traces=[tx.output, rx.input]):
+        with contextlib.ExitStack() as stack:
+            if FLAGS.vcd:
+                stack.enter_context(
+                    sim.write_vcd(os.path.join(test_dir, "test.vcd"),
+                                  os.path.join(test_dir, "test.gtkw"),
+                                  traces=[tx.output, rx.input]))
             sim.run()
 
     def test_sim(self):
-        test = r"""self._run_test('a', b"'a' = 0x61\r\n", runs=100)"""
+        test = rf"""self._run_test('a', b"'a' = 0x61\r\n", runs={FLAGS.runs})"""
         test_dir = test_util.BazelTestOutput(self.id())
         perf_file = os.path.join(test_dir, 'test.perf')
         cProfile.runctx(test, globals(), locals(), perf_file)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    app.run(lambda argv: unittest.main(argv=argv))

@@ -24,6 +24,7 @@ py_test(
     deps = [
         "//board/nexysa7100t:uart_demo",
         "//core:util",
+        "//pip:absl",
         "//pip:nmigen_sim",
         "//serial:uart",
         "//test:test_util",
