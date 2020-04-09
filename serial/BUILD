@@ -27,7 +27,7 @@ py_test(
         "//core:edge",
         "//core:shift_register",
         "//core:util",
-        "//pip:nmigen_sim",
+        "//pip:nmigen",
         "//test:test_util",
     ],
 )
@@ -51,7 +51,7 @@ py_test(
     deps = [
         ":uart",
         "//core:util",
-        "//pip:nmigen_sim",
+        "//pip:nmigen",
         "//test:test_util",
     ],
 )

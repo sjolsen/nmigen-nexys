@@ -56,7 +56,7 @@ py_test(
         ":manual_brightness",
         "//core:util",
         "//display:seven_segment",
-        "//pip:nmigen_sim",
+        "//pip:nmigen",
         "//test:test_util",
     ],
 )
@@ -138,7 +138,7 @@ py_test(
     deps = [
         ":uart_demo",
         "//core:util",
-        "//pip:nmigen_sim",
+        "//pip:nmigen",
         "//serial:uart",
         "//test:test_util",
     ],

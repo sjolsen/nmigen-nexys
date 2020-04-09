@@ -22,7 +22,7 @@ py_test(
     deps = [
         ":seven_segment",
         "//core:util",
-        "//pip:nmigen_sim",
+        "//pip:nmigen",
         "//test:test_util",
     ],
 )
@@ -34,7 +34,7 @@ py_test(
     deps = [
         ":seven_segment",
         "//core:util",
-        "//pip:nmigen_sim",
+        "//pip:nmigen",
         "//test:test_util",
     ],
 )

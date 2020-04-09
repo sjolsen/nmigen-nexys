@@ -39,7 +39,7 @@ py_test(
         "//core:edge",
         "//core:util",
         "//display:ssd1306",
-        "//pip:nmigen_sim",
+        "//pip:nmigen",
         "//serial:spi",
         "//test:test_util",
     ],

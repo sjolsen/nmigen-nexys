@@ -16,7 +16,7 @@ from nmigen_nexys.serial import uart
 from nmigen_nexys.test import test_util
 
 flags.DEFINE_boolean('vcd', False, 'Generate VCD/GTKW output')
-flags.DEFINE_integer('runs', 100, 'Number of test iterations to profile')
+flags.DEFINE_integer('runs', 10, 'Number of test iterations to profile')
 
 FLAGS = flags.FLAGS
 

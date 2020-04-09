@@ -8,17 +8,30 @@ package(default_visibility = ["//visibility:public"])
 py_library(
     name = "absl",
     deps = [
+        ":six",
         requirement("absl-py"),
-        requirement("six"),  # Needed by absl-py
     ],
+)
+
+py_library(
+    name = "jinja2",
+    deps = [
+        ":markupsafe",
+        requirement("jinja2"),
+    ],
+)
+
+py_library(
+    name = "markupsafe",
+    deps = [requirement("markupsafe")],
 )
 
 py_library(
     name = "nmigen",
     deps = [
+        ":jinja2",
+        ":pyvcd",
         requirement("nmigen"),
-        requirement("jinja2"),  # Needed by nmigen
-        requirement("markupsafe"),  # Needed by jinja2
     ],
 )
 
@@ -31,10 +44,14 @@ py_library(
 )
 
 py_library(
-    name = "nmigen_sim",
+    name = "pyvcd",
     deps = [
-        ":nmigen",
-        requirement("pyvcd"),  # Needed by nmigen
-        requirement("six"),  # Needed by pyvcd
+        ":six",
+        requirement("pyvcd"),
     ],
+)
+
+py_library(
+    name = "six",
+    deps = [requirement("six")],
 )

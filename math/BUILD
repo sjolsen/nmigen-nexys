@@ -19,7 +19,7 @@ py_test(
     deps = [
         ":bcd",
         "//core:util",
-        "//pip:nmigen_sim",
+        "//pip:nmigen",
         "//test:test_util",
     ],
 )
@@ -54,7 +54,7 @@ py_test(
     srcs = ["square_fraction_test.py"],
     deps = [
         ":square_fraction",
-        "//pip:nmigen_sim",
+        "//pip:nmigen",
     ],
 )
 
@@ -76,6 +76,6 @@ py_test(
         ":lut",
         ":trig",
         "//core:util",
-        "//pip:nmigen_sim",
+        "//pip:nmigen",
     ],
 )

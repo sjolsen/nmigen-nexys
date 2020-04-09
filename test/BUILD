@@ -25,7 +25,7 @@ py_test(
         "//board/nexysa7100t:uart_demo",
         "//core:util",
         "//pip:absl",
-        "//pip:nmigen_sim",
+        "//pip:nmigen",
         "//serial:uart",
         "//test:test_util",
     ],
@@ -36,6 +36,6 @@ py_library(
     srcs = ["test_util.py"],
     deps = [
         "//core:util",
-        "//pip:nmigen_sim",
+        "//pip:nmigen",
     ],
 )
