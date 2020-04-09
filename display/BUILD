@@ -3,19 +3,15 @@ load(
     "py_library",
     "py_test",
 )
-load(
-    "//core:top.bzl",
-    "nmigen_deps",
-    "nmigen_sim_deps",
-)
 
 package(default_visibility = ["//visibility:public"])
 
 py_library(
     name = "seven_segment",
     srcs = ["seven_segment.py"],
-    deps = nmigen_deps + [
+    deps = [
         "//core:pwm",
+        "//pip:nmigen",
     ],
 )
 
@@ -23,9 +19,10 @@ py_test(
     name = "seven_segment_sim",
     size = "small",
     srcs = ["seven_segment_sim.py"],
-    deps = nmigen_sim_deps + [
+    deps = [
         ":seven_segment",
         "//core:util",
+        "//pip:nmigen_sim",
         "//test:test_util",
     ],
 )
@@ -34,9 +31,10 @@ py_test(
     name = "seven_segment_test",
     size = "small",
     srcs = ["seven_segment_test.py"],
-    deps = nmigen_sim_deps + [
+    deps = [
         ":seven_segment",
         "//core:util",
+        "//pip:nmigen_sim",
         "//test:test_util",
     ],
 )
@@ -44,9 +42,10 @@ py_test(
 py_library(
     name = "ssd1306",
     srcs = ["ssd1306.py"],
-    deps = nmigen_deps + [
+    deps = [
         "//core:shift_register",
         "//core:util",
+        "//pip:nmigen",
         "//serial:spi",
     ],
 )

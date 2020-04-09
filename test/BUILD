@@ -4,7 +4,6 @@ load(
     "py_library",
     "py_test",
 )
-load("//core:top.bzl", "nmigen_sim_deps")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -22,9 +21,10 @@ py_test(
     name = "sim_perf_test",
     size = "large",
     srcs = ["sim_perf_test.py"],
-    deps = nmigen_sim_deps + [
+    deps = [
         "//board/nexysa7100t:uart_demo",
         "//core:util",
+        "//pip:nmigen_sim",
         "//serial:uart",
         "//test:test_util",
     ],
@@ -33,7 +33,8 @@ py_test(
 py_library(
     name = "test_util",
     srcs = ["test_util.py"],
-    deps = nmigen_sim_deps + [
+    deps = [
         "//core:util",
+        "//pip:nmigen_sim",
     ],
 )

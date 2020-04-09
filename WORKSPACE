@@ -19,7 +19,7 @@ py_repositories()
 # requirements.txt.
 pip_import(
     name = "pip_deps",
-    requirements = "//:pip_requirements.txt",
+    requirements = "//pip:requirements.txt",
 )
 
 # Load the central repo's install function from its `//:requirements.bzl` file,

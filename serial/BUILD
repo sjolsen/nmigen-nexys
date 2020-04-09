@@ -3,22 +3,18 @@ load(
     "py_library",
     "py_test",
 )
-load(
-    "//core:top.bzl",
-    "nmigen_deps",
-    "nmigen_sim_deps",
-)
 
 package(default_visibility = ["//visibility:public"])
 
 py_library(
     name = "spi",
     srcs = ["spi.py"],
-    deps = nmigen_deps + [
+    deps = [
         "//core:edge",
         "//core:shift_register",
         "//core:timer",
         "//core:util",
+        "//pip:nmigen",
     ],
 )
 
@@ -26,11 +22,12 @@ py_test(
     name = "spi_test",
     size = "small",
     srcs = ["spi_test.py"],
-    deps = nmigen_sim_deps + [
+    deps = [
         ":spi",
         "//core:edge",
         "//core:shift_register",
         "//core:util",
+        "//pip:nmigen_sim",
         "//test:test_util",
     ],
 )
@@ -38,11 +35,12 @@ py_test(
 py_library(
     name = "uart",
     srcs = ["uart.py"],
-    deps = nmigen_deps + [
+    deps = [
         "//core:edge",
         "//core:shift_register",
         "//core:timer",
         "//core:util",
+        "//pip:nmigen",
     ],
 )
 
@@ -50,9 +48,10 @@ py_test(
     name = "uart_test",
     size = "small",
     srcs = ["uart_test.py"],
-    deps = nmigen_sim_deps + [
+    deps = [
         ":uart",
         "//core:util",
+        "//pip:nmigen_sim",
         "//test:test_util",
     ],
 )

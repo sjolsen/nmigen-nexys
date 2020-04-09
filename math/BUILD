@@ -3,23 +3,23 @@ load(
     "py_library",
     "py_test",
 )
-load("//core:top.bzl", "nmigen_deps", "nmigen_sim_deps")
 
 package(default_visibility = ["//visibility:public"])
 
 py_library(
     name = "bcd",
     srcs = ["bcd.py"],
-    deps = nmigen_deps,
+    deps = ["//pip:nmigen"],
 )
 
 py_test(
     name = "bcd_test",
     size = "small",
     srcs = ["bcd_test.py"],
-    deps = nmigen_sim_deps + [
+    deps = [
         ":bcd",
         "//core:util",
+        "//pip:nmigen_sim",
         "//test:test_util",
     ],
 )
@@ -27,40 +27,44 @@ py_test(
 py_library(
     name = "lfsr",
     srcs = ["lfsr.py"],
-    deps = nmigen_deps + [
+    deps = [
         "//core:shift_register",
+        "//pip:nmigen",
     ],
 )
 
 py_library(
     name = "lut",
     srcs = ["lut.py"],
-    deps = nmigen_deps + [
+    deps = [
         "//core:util",
+        "//pip:nmigen",
     ],
 )
 
 py_library(
     name = "square_fraction",
     srcs = ["square_fraction.py"],
-    deps = nmigen_deps,
+    deps = ["//pip:nmigen"],
 )
 
 py_test(
     name = "square_fraction_test",
     size = "small",
     srcs = ["square_fraction_test.py"],
-    deps = nmigen_sim_deps + [
+    deps = [
         ":square_fraction",
+        "//pip:nmigen_sim",
     ],
 )
 
 py_library(
     name = "trig",
     srcs = ["trig.py"],
-    deps = nmigen_deps + [
+    deps = [
         ":lut",
         "//core:util",
+        "//pip:nmigen",
     ],
 )
 
@@ -68,9 +72,10 @@ py_test(
     name = "trig_test",
     size = "small",
     srcs = ["trig_test.py"],
-    deps = nmigen_sim_deps + [
+    deps = [
         ":lut",
         ":trig",
         "//core:util",
+        "//pip:nmigen_sim",
     ],
 )
