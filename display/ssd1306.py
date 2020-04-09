@@ -4,7 +4,7 @@ Datasheet: https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf.
 """
 
 import enum
-from typing import Any, Iterable, Literal, Union
+from typing import Any, Iterable, Union
 
 from nmigen import *
 from nmigen.build import *
@@ -143,9 +143,9 @@ class ContinuousHorizontalScrollSetup(Command):
 
     def __init__(
             self,
-            direction: Literal['right', 'left'],
+            direction: str,  # TODO(python-3.8): Literal['right', 'left'],
             start_page: int,
-            frame_interval: Literal[2, 3, 4, 5, 25, 64, 128, 256],
+            frame_interval: int,  # TODO(python-3.8): Literal[2, 3, 4, 5, 25, 64, 128, 256],
             end_page: int):
         direction_codes = {'right': 0, 'left': 1}
         if direction not in direction_codes:
@@ -237,7 +237,7 @@ class SetMemoryAddressingMode(Command):
 
 #     Setup column start and end address.
 
-#     Note: This command is only for horizontal or vertical addressing mode. 
+#     Note: This command is only for horizontal or vertical addressing mode.
 
 #     Args:
 #         start_address: Column start address
@@ -259,7 +259,7 @@ class SetMemoryAddressingMode(Command):
 
 #     Setup page start and end address.
 
-#     Note: This command is only for horizontal or vertical addressing mode. 
+#     Note: This command is only for horizontal or vertical addressing mode.
 
 #     Args:
 #         start_address: Page start Address

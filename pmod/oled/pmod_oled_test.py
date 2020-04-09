@@ -1,6 +1,6 @@
 """Tests for nmigen_nexys.pmod.oled.pmod_oled."""
 
-from typing import List, Literal, NamedTuple, Tuple, Union
+from typing import List, NamedTuple, Tuple, Union
 import unittest
 
 from nmigen import *
@@ -35,7 +35,7 @@ class DataEvent(NamedTuple):
 class EdgeEvent(NamedTuple):
     """Simulation event: GPIO toggled."""
     signal: str
-    direction: Literal['rose', 'fell']
+    direction: str  # TODO(python-3.8): Literal['rose', 'fell']
 
 
 Event = Union[CommandEvent, DataEvent, EdgeEvent]
