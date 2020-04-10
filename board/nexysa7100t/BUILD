@@ -23,6 +23,20 @@ nmigen_design(
     ],
 )
 
+nmigen_design(
+    name = "macro_demo",
+    size = "small",
+    srcs = ["macro_demo.py"],
+    deps = [
+        ":nexysa7100t",
+        "//core:top",
+        "//pip:absl",
+        "//pip:nmigen",
+        "//vendor/xilinx:macro",
+    ],
+)
+
+
 py_library(
     name = "manual_brightness",
     srcs = ["manual_brightness.py"],
