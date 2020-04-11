@@ -36,15 +36,6 @@ py_library(
 )
 
 py_library(
-    name = "top",
-    srcs = ["top.py"],
-    deps = [
-        "//pip:absl",
-        "//pip:nmigen",
-    ],
-)
-
-py_library(
     name = "util",
     srcs = ["util.py"],
     deps = ["//pip:nmigen"],

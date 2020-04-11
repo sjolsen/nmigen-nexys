@@ -26,3 +26,14 @@ def nmigen_design(name = None, size = None, *args, **kwargs):
         top = name,
         size = size,
     )
+    native.genrule(
+        name = "%s.build" % name,
+        srcs = [],
+        outs = ["%s.bit" % name],
+        tools = [name],
+        cmd = "$(location %s) --action=build --build_dir=$(@D)" % name,
+        tags = [
+            "manual",  # Don't include in build wildcards
+            "exclusive",  # Don't build in parallel
+        ],
+    )

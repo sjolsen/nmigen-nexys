@@ -1,10 +1,11 @@
 """Bazel rules for testing nMigen designs."""
 
+load("//bazel:script.bzl", "create_script")
 load("@rules_python//python:defs.bzl", "py_test")
 
 def Workspace(ctx, label):
     """Get the workspace name associated with a Label.
-    
+
     Labels do have a workspace_name field, but annoyingly it returns an empty
     string for the default workspace. When the name of the default workspace is
     needed, we get it from ctx.
@@ -22,18 +23,18 @@ def PathJoin(*args):
     return "/".join(args)
 
 def __elaboration_test_src(ctx):
-    ext = ctx.file._template.extension
-    substitutions = {
-        "{EXE}": ctx.executable.top.short_path,
-        "{VIVADO}": PathJoin(
-            Workspace(ctx, ctx.attr._no_synthesis.label),
-            ctx.executable._no_synthesis.short_path,
-        ),
-    }
-    ctx.actions.expand_template(
+    create_script(
+        ctx,
         template = ctx.file._template,
         output = ctx.outputs.src,
-        substitutions = substitutions,
+        exe = ctx.executable.top,
+        env = {
+            "VIVADO": PathJoin(
+                Workspace(ctx, ctx.attr._no_synthesis.label),
+                ctx.executable._no_synthesis.short_path,
+            ),
+        },
+        args = ["--action=elaborate"],
     )
 
 _elaboration_test_src = rule(
@@ -49,10 +50,10 @@ _elaboration_test_src = rule(
         ),
         "_template": attr.label(
             allow_single_file = True,
-            default = "//test:elaboration_test",
+            default = "//bazel:script",
         ),
         "_no_synthesis": attr.label(
-            default = "//test:no_synthesis",
+            default = "//bazel:no_synthesis",
             executable = True,
             cfg = "exec",
         ),
@@ -64,7 +65,7 @@ _elaboration_test_src = rule(
 
 def elaboration_test(name = None, top = None, *args, **kwargs):
     """Validate that nMigen can elaborate a design.
-    
+
     This requires that the design be implemented using
     nmigen_nexys.core.top.build. This sets up the command-line flags that allow
     the test to control build options. Rather than using this directly, use
@@ -89,7 +90,7 @@ def elaboration_test(name = None, top = None, *args, **kwargs):
         srcs = ["%s.py" % name],
         data = [
             top,
-            "//test:no_synthesis",
+            "//bazel:no_synthesis",
         ],
         deps = ["@rules_python//python/runfiles"],
         **kwargs

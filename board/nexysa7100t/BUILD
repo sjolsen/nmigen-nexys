@@ -3,7 +3,7 @@ load(
     "py_library",
     "py_test",
 )
-load("//core:top.bzl", "nmigen_design")
+load("//bazel:top.bzl", "nmigen_design")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -16,7 +16,7 @@ nmigen_design(
         "//color:srgb",
         "//core:pwm",
         "//core:timer",
-        "//core:top",
+        "//bazel:top",
         "//math:trig",
         "//pip:absl",
         "//pip:nmigen",
@@ -29,7 +29,7 @@ nmigen_design(
     srcs = ["macro_demo.py"],
     deps = [
         ":nexysa7100t",
-        "//core:top",
+        "//bazel:top",
         "//pip:absl",
         "//pip:nmigen",
         "//vendor/xilinx:macro",
@@ -55,7 +55,7 @@ nmigen_design(
         ":manual_brightness",
         ":nexysa7100t",
         "//color:srgb",
-        "//core:top",
+        "//bazel:top",
         "//display:seven_segment",
         "//pip:absl",
         "//pip:nmigen",
@@ -80,7 +80,7 @@ nmigen_design(
     size = "small",
     srcs = ["nexysa7100t.py"],
     deps = [
-        "//core:top",
+        "//bazel:top",
         "//pip:absl",
         "//pip:nmigen",
         "//pip:nmigen_boards",
@@ -94,7 +94,7 @@ nmigen_design(
     deps = [
         ":nexysa7100t",
         "//core:timer",
-        "//core:top",
+        "//bazel:top",
         "//pip:absl",
         "//pip:nmigen",
         "//pmod:pmod_8ld",
@@ -109,7 +109,7 @@ nmigen_design(
         ":nexysa7100t",
         "//core:shift_register",
         "//core:timer",
-        "//core:top",
+        "//bazel:top",
         "//core:util",
         "//display:ssd1306",
         "//math:lfsr",
@@ -125,7 +125,7 @@ nmigen_design(
     srcs = ["seven_segment_demo.py"],
     deps = [
         ":nexysa7100t",
-        "//core:top",
+        "//bazel:top",
         "//display:seven_segment",
         "//pip:absl",
         "//pip:nmigen",
@@ -138,7 +138,7 @@ nmigen_design(
     srcs = ["uart_demo.py"],
     deps = [
         ":nexysa7100t",
-        "//core:top",
+        "//bazel:top",
         "//pip:absl",
         "//pip:nmigen",
         "//serial:uart",

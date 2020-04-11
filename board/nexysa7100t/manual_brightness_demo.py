@@ -5,10 +5,10 @@ from nmigen import *
 from nmigen.build import *
 from nmigen.hdl.rec import *
 
+from nmigen_nexys.bazel import top
 from nmigen_nexys.board.nexysa7100t import manual_brightness
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
 from nmigen_nexys.color import srgb
-from nmigen_nexys.core import top
 from nmigen_nexys.display import seven_segment
 
 
