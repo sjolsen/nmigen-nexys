@@ -1,5 +1,5 @@
 """Command-line entry-point for Platform.build."""
-
+import os
 from absl import app
 from absl import flags
 from nmigen import *
@@ -17,6 +17,8 @@ def build(platform: Platform, top: Elaboratable):
     if FLAGS.action == 'elaborate':
         platform.prepare(top, FLAGS.name)
     elif FLAGS.action == 'build':
+        for k, v in os.environ.items():
+            print(k, v)
         plan = platform.prepare(top, FLAGS.name)
         plan.execute_local(FLAGS.build_dir)
     elif FLAGS.action == 'program':

@@ -1,2 +1,0 @@
-build --action_env=YOSYS
-build --action_env=VIVADO

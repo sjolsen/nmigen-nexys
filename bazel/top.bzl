@@ -3,6 +3,38 @@
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//test:test.bzl", "elaboration_test")
 
+def __build_design(ctx):
+    tools = ctx.toolchains["//vendor/xilinx:toolchain_type"].xilinx
+    ctx.actions.run(
+        outputs = [ctx.outputs.bit],
+        inputs = [],
+        executable = ctx.executable.design,
+        arguments = ["--action=build", "--build_dir=" + ctx.outputs.bit.dirname],
+        env = {
+            "PROCESSOR_ARCHITECTURE": "AMD64",  # TODO: Hack hack hack
+            "VIVADO": tools.vivado,
+            "YOSYS": tools.yosys,
+        },
+    )
+
+_build_design = rule(
+    implementation = __build_design,
+    attrs = {
+        "design": attr.label(
+            mandatory = True,
+            executable = True,
+            cfg = "exec",
+        ),
+        "bit": attr.string(
+            mandatory = True,
+        ),
+    },
+    toolchains = ["//vendor/xilinx:toolchain_type"],
+    outputs = {
+        "bit": "%{bit}",
+    },
+)
+
 def nmigen_design(name = None, size = None, *args, **kwargs):
     """An nMigen design using nmigen_nexys.core.top.build.
 
@@ -26,12 +58,10 @@ def nmigen_design(name = None, size = None, *args, **kwargs):
         top = name,
         size = size,
     )
-    native.genrule(
+    _build_design(
         name = "%s.build" % name,
-        srcs = [],
-        outs = ["%s.bit" % name],
-        tools = [name],
-        cmd = "$(location %s) --action=build --build_dir=$(@D)" % name,
+        design = name,
+        bit = "%s.bit" % name,
         tags = [
             "manual",  # Don't include in build wildcards
             "exclusive",  # Don't build in parallel
