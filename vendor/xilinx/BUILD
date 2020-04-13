@@ -11,6 +11,12 @@ py_library(
     deps = ["//pip:nmigen"],
 )
 
+py_library(
+    name = "primitive",
+    srcs = ["primitive.py"],
+    deps = ["//pip:nmigen"],
+)
+
 xilinx_toolchain(
     name = "xilinx_linux",
     vivado_path = "/opt/xilinx/Vivado/2019.2/bin/vivado",

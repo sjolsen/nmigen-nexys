@@ -28,7 +28,7 @@ class AddSub(Elaboratable):
             assert 1 <= width_result <= 48
         else:
             width_result = width
-        # Attributes
+        # Parameters
         self.device = device
         self.latency = latency
         self.width = width
