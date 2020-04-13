@@ -27,6 +27,14 @@ py_library(
 )
 
 py_library(
+    name = "minerva",
+    deps = [
+        ":nmigen",
+        requirement("minerva"),
+    ],
+)
+
+py_library(
     name = "nmigen",
     deps = [
         ":jinja2",

@@ -1,6 +1,8 @@
 absl-py
 Jinja2~=2.11
 MarkupSafe
+# master as of 2020-04-13 01:05 PDT
+git+https://github.com/lambdaconcept/minerva.git@d06b5d2fd354cad3040f0efaf58b2f206395b7d0
 # master as of 2020-04-07 17:59 PDT
 git+https://github.com/nmigen/nmigen.git@0e40dc0a2d336945dfe0669207fe160cafff50dc
 # file://C:/Users/Stuart/nmigen/nmigen
