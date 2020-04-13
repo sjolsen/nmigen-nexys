@@ -6,6 +6,17 @@ load(
 
 package(default_visibility = ["//visibility:public"])
 
+py_library(
+    name = "event",
+    srcs = ["event.py"],
+    deps = [
+        ":test_util",
+        "//core:edge",
+        "//core:util",
+        "//pip:nmigen",
+    ],
+)
+
 py_test(
     name = "sim_perf_test",
     size = "large",

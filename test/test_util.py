@@ -1,10 +1,52 @@
 """Utilities for test and simulation."""
 
 import os
+from typing import Generator, Union, TypeVar
+import unittest
 
+from nmigen import *
 from nmigen.back.pysim import *
 
 from nmigen_nexys.core import util
+
+
+T = TypeVar('T', covariant=True)
+CoroutineProcess = Generator[
+    Union[Value, Command, None],  # Yield
+    int,  # Send (i.e. result of yield)
+    T,  # Return
+]
+
+
+class Timer(Elaboratable):
+
+    def __init__(self, tc: unittest.TestCase, timeout_s: float):
+        super().__init__()
+        self.tc = tc
+        self.timeout_s = timeout_s
+        self.cycle_counter = Signal(
+            range(int(timeout_s * util.SIMULATION_CLOCK_FREQUENCY)),
+            reset=0)
+
+    def elaborate(self, _: None) -> Module:
+        m = Module()
+        m.d.sync += self.cycle_counter.eq(self.cycle_counter + 1)
+        return m
+
+    def timeout_process(self) -> CoroutineProcess[None]:
+        yield Passive()
+        seconds = self.timeout_s
+        yield Delay(seconds)
+        if seconds >= 1:
+            self.tc.fail(f'Test timed out after {seconds} s')
+        elif seconds >= 1e-3:
+            self.tc.fail(f'Test timed out after {seconds * 1e3} ms')
+        elif seconds >= 1e-6:
+            self.tc.fail(f'Test timed out after {seconds * 1e6} us')
+        elif seconds >= 1e-9:
+            self.tc.fail(f'Test timed out after {seconds * 1e9} ns')
+        else:
+            self.tc.fail(f'Test timed out after {seconds * 1e12} ps')
 
 
 def YieldList(l):

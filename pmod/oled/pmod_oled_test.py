@@ -1,6 +1,6 @@
 """Tests for nmigen_nexys.pmod.oled.pmod_oled."""
 
-from typing import List, NamedTuple, Tuple, Union
+from typing import List, NamedTuple
 import unittest
 
 from nmigen import *
@@ -12,6 +12,7 @@ from nmigen_nexys.core import util
 from nmigen_nexys.display import ssd1306
 from nmigen_nexys.pmod.oled import pmod_oled
 from nmigen_nexys.serial import spi
+from nmigen_nexys.test import event
 from nmigen_nexys.test import test_util
 
 
@@ -32,15 +33,6 @@ class DataEvent(NamedTuple):
     byte: int
 
 
-class EdgeEvent(NamedTuple):
-    """Simulation event: GPIO toggled."""
-    signal: str
-    direction: str  # TODO(python-3.8): Literal['rose', 'fell']
-
-
-Event = Union[CommandEvent, DataEvent, EdgeEvent]
-
-
 class PowerSequenceTest(unittest.TestCase):
     """Simulate and validate the power-sequencing logic."""
 
@@ -59,14 +51,11 @@ class PowerSequenceTest(unittest.TestCase):
         m.submodules.reset_edge = reset_edge = edge.Detector(pins.reset)
         m.submodules.vbatc_edge = vbatc_edge = edge.Detector(pins.vbatc)
         m.submodules.vddc_edge = vddc_edge = edge.Detector(pins.vddc)
-        timestamp = Signal(
-            range(int(self.TIMEOUT_S * util.SIMULATION_CLOCK_FREQUENCY)),
-            reset=0)
-        m.d.sync += timestamp.eq(timestamp + 1)
+        m.submodules.timer = timer = test_util.Timer(self, self.TIMEOUT_S)
         sim = Simulator(m)
         sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
-        sim_events: List[Tuple[int, Event]] = []
+        sim_events: List[event.TimestampedEvent] = []
 
         def sequencer_process():
             yield sequencer.enable.eq(1)
@@ -93,16 +82,18 @@ class PowerSequenceTest(unittest.TestCase):
                         bit = yield pins.mosi
                         bits.append(bit)
                         if len(bits) == 8:
-                            now = yield timestamp
+                            cycle = yield timer.cycle_counter
                             dc = yield pins.dc
                             self.assertIsNotNone(dc)
                             self.assertEqual(len(bits), 8)
                             if dc:
+                                ev = DataEvent(ByteFromBits(bits))
                                 sim_events.append(
-                                    (now, DataEvent(ByteFromBits(bits))))
+                                    event.TimestampedEvent(cycle, ev))
                             else:
+                                ev = CommandEvent(ByteFromBits(bits))
                                 sim_events.append(
-                                    (now, CommandEvent(ByteFromBits(bits))))
+                                    event.TimestampedEvent(cycle, ev))
                             dc = None
                             bits = []
                     if events & (1 << spi.BusEvent.STOP):
@@ -110,30 +101,14 @@ class PowerSequenceTest(unittest.TestCase):
                     yield
                 yield
 
-        def edge_monitor():
-            yield Passive()
-            while True:
-                yield
-                for detector in [reset_edge, vbatc_edge, vddc_edge]:
-                    now = yield timestamp
-                    rose = yield detector.rose
-                    fell = yield detector.fell
-                    if rose:
-                        sim_events.append(
-                            (now, EdgeEvent(detector.input.name, 'rose')))
-                    if fell:
-                        sim_events.append(
-                            (now, EdgeEvent(detector.input.name, 'fell')))
-
-        def timeout():
-            yield Passive()
-            yield Delay(self.TIMEOUT_S)
-            self.fail('Test timed out after {self.TIMEOUT_S} s')
-
         sim.add_sync_process(sequencer_process)
         sim.add_sync_process(spi_monitor)
-        sim.add_sync_process(edge_monitor)
-        sim.add_sync_process(timeout)
+        sim.add_sync_process(
+            event.edge_monitor(
+                detectors=[reset_edge, vbatc_edge, vddc_edge],
+                cycle_counter=timer.cycle_counter,
+                callback=sim_events.append))
+        sim.add_sync_process(timer.timeout_process)
         test_dir = test_util.BazelTestOutput(self.id())
         os.makedirs(test_dir, exist_ok=True)
         with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
@@ -141,51 +116,28 @@ class PowerSequenceTest(unittest.TestCase):
                            traces=list(pins.fields.values())):
             sim.run()
 
-        if not sim_events:
-            self.fail('No simulation events captured')
-        dbg_table = []
-        for (ts, e), (pts, prev) in zip(sim_events, [(None, None)] + sim_events[:-1]):
-            diff = f'({ts - pts:+})' if prev else ' '
-            dbg_table.append((str(ts), diff, repr(e)))
-        widths = [max(len(row[col]) for row in dbg_table) for col in range(2)]
-        dbg_out = ['Simulation events:']
-        for ts, diff, disp in dbg_table:
-            dbg_out.append(f'  {ts:>{widths[0]}} {diff:>{widths[1]}} {disp}')
-        print('\n'.join(dbg_out))
-
-        expected: Union[Event, float] = [
+        event.ShowEvents(self, sim_events)
+        expected: event.EventConstraints = [
             # Power on
-            EdgeEvent(pins.vddc.name, 'fell'),
-            0.1,
+            event.EdgeEvent(pins.vddc, 'fell'),
+            event.MinDelay(seconds=0.1e-6),
             CommandEvent(0xAE),
-            0.1,
-            EdgeEvent(pins.reset.name, 'rose'),
+            event.MinDelay(seconds=0.1e-6),
+            event.EdgeEvent(pins.reset, 'rose'),
             CommandEvent(0x8D),
             CommandEvent(0x14),
             CommandEvent(0xD9),
             CommandEvent(0xF1),
-            EdgeEvent(pins.vbatc.name, 'fell'),
-            20.0,
+            event.EdgeEvent(pins.vbatc, 'fell'),
+            event.MinDelay(seconds=20.0e-6),
             CommandEvent(0xAF),
             # Power off
             CommandEvent(0xAE),
-            EdgeEvent(pins.vbatc.name, 'rose'),
-            20.0,
-            EdgeEvent(pins.vddc.name, 'rose'),
+            event.EdgeEvent(pins.vbatc, 'rose'),
+            event.MinDelay(seconds=20.0e-6),
+            event.EdgeEvent(pins.vddc, 'rose'),
         ]
-        last_ts = 0.0
-        min_delta = None
-        actual_iter = iter(sim_events)
-        for expectation in expected:
-            if isinstance(expectation, float):
-                min_delta = expectation
-                continue
-            else:
-                min_delta = 0.0
-            ts, this = next(actual_iter)
-            self.assertEqual(this, expectation)
-            self.assertGreaterEqual(ts - last_ts, min_delta)
-            last_ts = ts
+        event.ValidateConstraints(self, sim_events, expected)
 
 
 if __name__ == '__main__':

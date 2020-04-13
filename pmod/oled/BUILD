@@ -41,6 +41,7 @@ py_test(
         "//display:ssd1306",
         "//pip:nmigen",
         "//serial:spi",
+        "//test:event",
         "//test:test_util",
     ],
 )
