@@ -29,4 +29,7 @@ load("@pip_deps//:requirements.bzl", "pip_install")
 
 pip_install()
 
-register_toolchains("//vendor/xilinx:xilinx_windows_toolchain")
+register_toolchains(
+    "//vendor/xilinx:xilinx_linux_toolchain",
+    "//vendor/xilinx:xilinx_windows_toolchain",
+)
