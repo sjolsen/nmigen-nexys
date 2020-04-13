@@ -1,5 +1,4 @@
 """Command-line entry-point for Platform.build."""
-import os
 from absl import app
 from absl import flags
 from nmigen import *
