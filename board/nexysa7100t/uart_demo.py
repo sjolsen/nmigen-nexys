@@ -9,8 +9,8 @@ from absl import flags
 from nmigen import *
 from nmigen.build import *
 
+from nmigen_nexys.bazel import top
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
-from nmigen_nexys.core import top
 from nmigen_nexys.serial import uart
 
 flags.DEFINE_integer('debug_pmod', None, 'Pmod header to use for debugging')

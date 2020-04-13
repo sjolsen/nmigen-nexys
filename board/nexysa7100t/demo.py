@@ -4,11 +4,11 @@ from absl import app
 from nmigen import *
 from nmigen.build import *
 
+from nmigen_nexys.bazel import top
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
 from nmigen_nexys.color import srgb
 from nmigen_nexys.core import pwm as pwm_module
 from nmigen_nexys.core import timer
-from nmigen_nexys.core import top
 from nmigen_nexys.math import trig
 
 

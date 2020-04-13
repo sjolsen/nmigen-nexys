@@ -1,21 +1,10 @@
 load(
     "@rules_python//python:defs.bzl",
-    "py_binary",
     "py_library",
     "py_test",
 )
 
 package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "elaboration_test",
-    srcs = ["elaboration_test.py"],
-)
-
-py_binary(
-    name = "no_synthesis",
-    srcs = ["no_synthesis.py"],
-)
 
 py_test(
     name = "sim_perf_test",

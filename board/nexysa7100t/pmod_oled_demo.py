@@ -4,10 +4,10 @@ from absl import app
 from nmigen import *
 from nmigen.build import *
 
+from nmigen_nexys.bazel import top
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
 from nmigen_nexys.core import shift_register
 from nmigen_nexys.core import timer as timer_module
-from nmigen_nexys.core import top
 from nmigen_nexys.core import util
 from nmigen_nexys.display import ssd1306
 from nmigen_nexys.math import lfsr as lfsr_module
