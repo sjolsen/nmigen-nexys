@@ -3,19 +3,32 @@
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//test:test.bzl", "elaboration_test")
 
+NmigenBuildInfo = provider(fields = ["design", "build_dir"])
+
 def __build_design(ctx):
     tools = ctx.toolchains["//vendor/xilinx:toolchain_type"].xilinx
+    bdir = ctx.actions.declare_directory(ctx.label.name + "_build")
+    genbit = ctx.actions.declare_file(ctx.label.name + "_build/top.bit")
     ctx.actions.run(
-        outputs = [ctx.outputs.bit],
+        outputs = [bdir, genbit],
         inputs = [],
         executable = ctx.executable.design,
-        arguments = ["--action=build", "--build_dir=" + ctx.outputs.bit.dirname],
+        arguments = ["--action=build", "--build_dir=" + bdir.path],
         env = {
-            "PROCESSOR_ARCHITECTURE": "AMD64",  # TODO: Hack hack hack
+            "HOME": ctx.label.name + "_home",
             "VIVADO": tools.vivado,
             "YOSYS": tools.yosys,
         },
     )
+    ctx.actions.run_shell(
+        outputs = [ctx.outputs.bit],
+        inputs = [genbit],
+        command = "cp %s %s" % (genbit.path, ctx.outputs.bit.path),
+    )
+    return [NmigenBuildInfo(
+        design = ctx.attr.design[DefaultInfo],
+        build_dir = bdir,
+    )]
 
 _build_design = rule(
     implementation = __build_design,
@@ -33,6 +46,30 @@ _build_design = rule(
     outputs = {
         "bit": "%{bit}",
     },
+)
+
+def __program_design(ctx):
+    products = ctx.attr.products[NmigenBuildInfo]
+    ctx.actions.write(
+        content = "{exe} --action=program --build_dir={build_dir}".format(
+            exe = products.design.files_to_run.executable.short_path,
+            build_dir = products.build_dir.short_path),
+        output = ctx.outputs.executable,
+        is_executable = True,
+    )
+    return [DefaultInfo(
+        runfiles = ctx.runfiles([products.build_dir]).merge(products.design.default_runfiles),
+    )]
+
+_program_design = rule(
+    implementation = __program_design,
+    attrs = {
+        "products": attr.label(
+            mandatory = True,
+            providers = [NmigenBuildInfo],
+        ),
+    },
+    executable = True,
 )
 
 def nmigen_design(name = None, size = None, *args, **kwargs):
@@ -66,4 +103,8 @@ def nmigen_design(name = None, size = None, *args, **kwargs):
             "manual",  # Don't include in build wildcards
             "exclusive",  # Don't build in parallel
         ],
+    )
+    _program_design(
+        name = "%s.program" % name,
+        products = "%s.build" % name,
     )
