@@ -18,7 +18,7 @@ class RemoteBitbang(Elaboratable):
                 ('tx', 1, Direction.FANOUT),
                 ('rts', 1, Direction.FANOUT),
                 ('cts', 1, Direction.FANIN),
-            ]))
+            ]), name='uart')
 
     class JTAGInterface(Record):
 
@@ -30,7 +30,7 @@ class RemoteBitbang(Elaboratable):
                 ('tms', 1, Direction.FANIN),
                 ('trst', 1, Direction.FANIN),
                 ('srst', 1, Direction.FANIN),
-            ]))
+            ]), name='jtag')
 
     def __init__(self):
         super().__init__()
