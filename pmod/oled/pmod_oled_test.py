@@ -116,7 +116,7 @@ class PowerSequenceTest(unittest.TestCase):
                            traces=list(pins.fields.values())):
             sim.run()
 
-        event.ShowEvents(self, sim_events)
+        event.ShowEvents(sim_events)
         expected: event.EventConstraints = [
             # Power on
             event.EdgeEvent(pins.vddc, 'fell'),

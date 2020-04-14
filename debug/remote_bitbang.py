@@ -3,6 +3,7 @@ from typing import Optional
 from nmigen import *
 from nmigen.build import *
 from nmigen.hdl.rec import *
+from nmigen.lib.cdc import FFSynchronizer
 from nmigen.lib.fifo import SyncFIFOBuffered
 
 from nmigen_nexys.serial import uart
@@ -16,8 +17,8 @@ class RemoteBitbang(Elaboratable):
             super().__init__(Layout([
                 ('rx', 1, Direction.FANIN),
                 ('tx', 1, Direction.FANOUT),
-                ('rts', 1, Direction.FANOUT),
-                ('cts', 1, Direction.FANIN),
+                ('rts_n', 1, Direction.FANOUT),
+                ('cts_n', 1, Direction.FANIN),
             ]), name='uart')
 
     class JTAGInterface(Record):
@@ -32,24 +33,30 @@ class RemoteBitbang(Elaboratable):
                 ('srst', 1, Direction.FANIN),
             ]), name='jtag')
 
-    def __init__(self):
+    def __init__(self, baud_rate: int):
         super().__init__()
+        self.baud_rate = baud_rate
         self.uart = self.UARTInterface()
         self.jtag = self.JTAGInterface()
         self.blink = Signal(1)
 
     def elaborate(self, _: Optional[Platform]) -> Module:
         m = Module()
+        cts_n = Signal(1)
+        m.submodules.cts_sync = FFSynchronizer(i=self.uart.cts_n, o=cts_n,
+                                               reset=1)
         # Frontend + FIFOs
-        m.submodules.rx = rx = uart.Receive(12_000_000)
+        # TODO: This shouldn't need to go 8 deep, but things get flaky if I
+        #   reduce it down to 2
+        m.submodules.rx = rx = uart.Receive(self.baud_rate)
         m.submodules.rx_fifo = rx_fifo = SyncFIFOBuffered(width=8, depth=8)
         m.d.comb += [
             rx.input.eq(self.uart.rx),
             rx_fifo.w_data.eq(rx.data),
             rx_fifo.w_en.eq(rx.done),  # Masked internally by w_rdy
-            self.uart.rts.eq(rx_fifo.w_rdy),
+            self.uart.rts_n.eq(~rx_fifo.w_rdy),
         ]
-        m.submodules.tx = tx = uart.Transmit(12_000_000)
+        m.submodules.tx = tx = uart.Transmit(self.baud_rate)
         m.submodules.tx_fifo = tx_fifo = SyncFIFOBuffered(width=1, depth=8)
         m.d.comb += [
             self.uart.tx.eq(tx.output),
@@ -59,13 +66,13 @@ class RemoteBitbang(Elaboratable):
         m.d.comb += tx_fifo.r_en.eq(0)  # default
         with m.FSM(name='tx', reset='IDLE'):
             with m.State('IDLE'):
-                with m.If(self.uart.cts & tx_fifo.r_rdy):
+                with m.If(~cts_n & tx_fifo.r_rdy):
                     m.d.comb += tx.start.eq(1)
                     m.d.comb += tx_fifo.r_en.eq(1)
                     m.next = 'TRANSMITTING'
             with m.State('TRANSMITTING'):
                 with m.If(tx.done):
-                    with m.If(self.uart.cts & tx_fifo.r_rdy):
+                    with m.If(~cts_n & tx_fifo.r_rdy):
                         m.d.comb += tx.start.eq(1)
                         m.d.comb += tx_fifo.r_en.eq(1)
                         m.next = 'TRANSMITTING'
@@ -82,7 +89,8 @@ class RemoteBitbang(Elaboratable):
                     tx_data = Signal(1)
                     tx_ready = Signal(1, reset=0)
                     with m.Switch(rx_fifo.r_data):
-                        wbits = Cat(self.jtag.tdi, self.jtag.tms, self.jtag.tck)
+                        wbits = Cat(self.jtag.tdi,
+                                    self.jtag.tms, self.jtag.tck)
                         rbits = Cat(self.jtag.srst, self.jtag.trst)
                         with m.Case(ord('B')):
                             m.d.sync += self.blink.eq(1)

@@ -42,9 +42,10 @@ def edge_monitor(detectors: Iterable[edge.Detector],
     return _edge_monitor
 
 
-def ShowEvents(tc: unittest.TestCase, sim_events: List[TimestampedEvent]):
+def ShowEvents(sim_events: List[TimestampedEvent]):
     if not sim_events:
-        tc.fail('No simulation events captured')
+        print('No simulation events captured')
+        return
     dbg_table = []
     for e1, e2 in zip([None] + sim_events[:-1], sim_events):
         diff = f'({e2.cycle - e1.cycle:+})' if e1 else ' '

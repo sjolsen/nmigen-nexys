@@ -120,20 +120,6 @@ nmigen_design(
 )
 
 nmigen_design(
-    name = "riscv_demo",
-    size = "small",
-    srcs = ["riscv_demo.py"],
-    deps = [
-        ":nexysa7100t",
-        "//bazel:top",
-        "//vendor/xilinx:primitive",
-        "//pip:absl",
-        "//pip:minerva",
-        "//pip:nmigen",
-    ],
-)
-
-nmigen_design(
     name = "seven_segment_demo",
     size = "small",
     srcs = ["seven_segment_demo.py"],

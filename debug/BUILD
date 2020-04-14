@@ -23,6 +23,7 @@ py_test(
         "//core:util",
         "//pip:nmigen",
         "//serial:uart",
+        "//test:event",
         "//test:test_util",
     ],
 )
