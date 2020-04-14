@@ -258,6 +258,7 @@ class TrueDualPortRAM(Elaboratable):
     def elaborate(self, _: Optional[Platform]) -> Fragment:
         f = Fragment()
         params = [
+            ('p', 'BRAM_SIZE', self.bram_size),
             ('p', 'DEVICE', self.device),
             ('p', 'DOA_REG', self.port_a.do_reg),
             ('p', 'DOB_REG', self.port_b.do_reg),
