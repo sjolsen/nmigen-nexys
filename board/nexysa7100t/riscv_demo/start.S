@@ -9,7 +9,7 @@ _start:
 1:  la t0, __periph_start
     li t1, 0xdeadbeef
     sw t1, 0(t0)
-2:  wfi
+2:  nop  # Minerva does not implement wfi
     j 2b
 
 .section .rodata

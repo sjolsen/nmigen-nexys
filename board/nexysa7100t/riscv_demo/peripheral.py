@@ -208,7 +208,7 @@ class WishboneRegisters(Elaboratable):
         m.d.comb += active.eq(self.wbus.cyc & self.wbus.stb)
         m.d.comb += write.eq(active & self.wbus.we)
         addressed_signals = []
-        periph_mask32 = ~(self.size - 1)
+        periph_mask32 = self.size - 1
         for reg in self.registers:
             mask32 = periph_mask32 & ~(reg.size - 1)
             mask30 = mask32 >> 2
