@@ -11,6 +11,7 @@ py_library(
     srcs = ["seven_segment.py"],
     deps = [
         "//core:pwm",
+        "//math:lut",
         "//pip:nmigen",
     ],
 )

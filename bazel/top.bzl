@@ -107,4 +107,5 @@ def nmigen_design(name = None, size = None, *args, **kwargs):
     _program_design(
         name = "%s.program" % name,
         products = "%s.build" % name,
+        tags = ["manual"],
     )

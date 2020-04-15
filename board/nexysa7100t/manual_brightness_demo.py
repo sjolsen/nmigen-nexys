@@ -57,7 +57,7 @@ class ManualBrightness(Elaboratable):
             segments=Signal(8), anodes=Signal(8))
         m.d.comb += segments.eq(display.segments)
         m.d.comb += anodes.eq(display.anodes)
-        m.submodules.dispmux = seven_segment.DisplayMultiplexer(
+        m.submodules.dispmux = seven_segment.ArrayDisplayMultiplexer(
             inputs=Array(rdispval + ldispval),
             output=display)
 

@@ -5,7 +5,7 @@ from nmigen.build import *
 
 from nmigen_nexys.bazel import top
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
-from nmigen_nexys.board.nexysa7100t.riscv_demo import memory
+from nmigen_nexys.board.nexysa7100t.riscv_demo import peripheral
 from nmigen_nexys.debug import remote_bitbang
 
 
@@ -30,10 +30,12 @@ class RiscvDemo(Elaboratable):
             cpu.jtag.tms.eq(rbb.jtag.tms),
             cpu.jtag.trst.eq(rbb.jtag.trst),
         ]
-        # Set up RAM
-        m.submodules.ram = ram = memory.RAM()
-        m.d.comb += cpu.ibus.connect(ram.ibus)
-        m.d.comb += cpu.dbus.connect(ram.dbus)
+        # Connect peripherals to the CPU and external world
+        m.submodules.periph = periph = peripheral.Peripherals()
+        m.d.comb += platform.request('display_7seg').eq(periph.segments)
+        m.d.comb += platform.request('display_7seg_an').eq(periph.anodes)
+        m.d.comb += cpu.ibus.connect(periph.ibus)
+        m.d.comb += cpu.dbus.connect(periph.dbus)
         return m
 
 
