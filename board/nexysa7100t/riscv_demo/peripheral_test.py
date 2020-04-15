@@ -44,7 +44,7 @@ class PeripheralTest(unittest.TestCase):
         with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
                            os.path.join(test_dir, "test.gtkw"),
                            traces=traces):
-            sim.run_until(10e-6, run_passive=True)
+            sim.run_until(1e-6, run_passive=True)
 
 
 if __name__ == '__main__':

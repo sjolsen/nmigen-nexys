@@ -7,12 +7,8 @@ MEMORY {
 ENTRY(_start)
 
 SECTIONS {
-    .reset : AT(0x00000000) {
-        LONG(_start)
-    } >brom
-    ASSERT((SIZEOF(.reset) == 4), "Reset vector not of length 4")
-
-    .text : {
+    .text : AT(0x00000000) {
+        _start = .;
         *(.text*)
     } >brom
 

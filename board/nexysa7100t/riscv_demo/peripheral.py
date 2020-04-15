@@ -5,7 +5,7 @@ from nmigen import *
 from nmigen.build import *
 from nmigen.hdl.mem import *
 from nmigen.hdl.ast import Statement
-from nmigen.hdl.rec import Direction, Record
+from nmigen.hdl.rec import Record
 from rules_python.python.runfiles import runfiles
 
 from nmigen_nexys.core import util
@@ -44,22 +44,35 @@ class WishboneMux(Elaboratable):
 
     def elaborate(self, _: Optional[Platform]) -> Module:
         m = Module()
+        addressed_signals = []
         for port in self.ports:
+            # Better debug naming
+            pbus = Record.like(port.wbus, name=port.name)
+            m.d.comb += pbus.connect(port.wbus)
             mask32 = ~(port.size - 1)
             mask30 = mask32 >> 2
             addressed = Signal(name=f'addressed_{port.name}')
             m.d.comb += addressed.eq(
                 (self.wbus.adr & mask30) == port.start >> 2)
-            for signal, _, direction in wishbone.wishbone_layout:
-                upstream = getattr(self.wbus, signal)
-                downstream = getattr(port.wbus, signal)
-                if direction == Direction.FANIN:
-                    with m.If(addressed):
-                        m.d.comb += upstream.eq(downstream)
-                elif direction == Direction.FANOUT:
-                    m.d.comb += downstream.eq(upstream)
-                else:
-                    raise RuntimeError(f'Invalid direction: {direction}')
+            addressed_signals.append(addressed)
+            m.d.comb += [
+                pbus.adr.eq(self.wbus.adr),
+                pbus.dat_w.eq(self.wbus.dat_w),
+                pbus.sel.eq(self.wbus.sel),
+                pbus.stb.eq(self.wbus.stb),
+                pbus.we.eq(self.wbus.we),
+                pbus.cti.eq(self.wbus.cti),
+                pbus.bte.eq(self.wbus.bte),
+            ]
+            with m.If(addressed):
+                m.d.comb += [
+                    pbus.cyc.eq(self.wbus.cyc),
+                    self.wbus.dat_r.eq(pbus.dat_r),
+                    self.wbus.ack.eq(pbus.ack),
+                    self.wbus.err.eq(pbus.err),
+                ]
+        with m.If(self.wbus.cyc & ~Cat(*addressed_signals).any()):
+            m.d.comb += self.wbus.err.eq(1)
         return m
 
 
@@ -195,8 +208,9 @@ class WishboneRegisters(Elaboratable):
         m.d.comb += active.eq(self.wbus.cyc & self.wbus.stb)
         m.d.comb += write.eq(active & self.wbus.we)
         addressed_signals = []
+        periph_mask32 = ~(self.size - 1)
         for reg in self.registers:
-            mask32 = ~(reg.size - 1)
+            mask32 = periph_mask32 & ~(reg.size - 1)
             mask30 = mask32 >> 2
             addressed = Signal(name=f'addressed_{reg.name}')
             m.d.comb += addressed.eq(
@@ -230,6 +244,7 @@ class SevenSegmentDisplay(Elaboratable):
         m.submodules.regs = regs = WishboneRegisters(
             size=0x100,
             regs=[('data', 0x00, 4, 0x0000_0000)])
+        m.d.comb += self.wbus.connect(regs.wbus)
         m.submodules.digit = digit = seven_segment.HexDigitLUT()
         digits = Array(regs.data[4*i:4*(i+1)] for i in range(8))
         m.submodules.mux = mux = seven_segment.DisplayMultiplexer(self.output)
