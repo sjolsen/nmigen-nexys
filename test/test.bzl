@@ -53,7 +53,7 @@ _elaboration_test_src = rule(
             default = "//bazel:script",
         ),
         "_no_synthesis": attr.label(
-            default = "//bazel:no_synthesis",
+            default = "//vendor/xilinx:no_synthesis",
             executable = True,
             cfg = "exec",
         ),
@@ -90,7 +90,7 @@ def elaboration_test(name = None, top = None, *args, **kwargs):
         srcs = ["%s.py" % name],
         data = [
             top,
-            "//bazel:no_synthesis",
+            "//vendor/xilinx:no_synthesis",
         ],
         deps = ["@rules_python//python/runfiles"],
         **kwargs

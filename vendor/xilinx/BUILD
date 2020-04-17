@@ -11,6 +11,11 @@ py_library(
     deps = ["//pip:nmigen"],
 )
 
+py_binary(
+    name = "no_synthesis",
+    srcs = ["no_synthesis.py"],
+)
+
 py_library(
     name = "primitive",
     srcs = ["primitive.py"],

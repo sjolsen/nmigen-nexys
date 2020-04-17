@@ -11,11 +11,6 @@ filegroup(
     srcs = ["script.py"],
 )
 
-py_binary(
-    name = "no_synthesis",
-    srcs = ["no_synthesis.py"],
-)
-
 py_library(
     name = "top",
     srcs = ["top.py"],
