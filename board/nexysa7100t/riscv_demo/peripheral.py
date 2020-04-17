@@ -1,4 +1,4 @@
-from typing import Iterable, List, NamedTuple, Optional
+from typing import Iterable, NamedTuple, Optional
 
 from minerva import wishbone
 from nmigen import *
@@ -98,18 +98,25 @@ class DualPortBRAM(Elaboratable):
         else:
             return bytes()
 
-    def _connect_memory(self, wbus: Record, rport: ReadPort,
-                        wport: WritePort) -> List[Statement]:
+    def _connect_memory(self, m: Module, wbus: Record, rport: ReadPort,
+                        wport: WritePort):
         # Inspired by Wishbone B4 8.7.2
         strobe = wbus.cyc & wbus.stb
         write = Mux(strobe & wbus.we, wbus.sel, 0)
-        return [
+        will_ack = Signal()
+        will_err = Signal()
+        m.d.comb += [
             rport.addr.eq(wbus.adr),
             wport.addr.eq(wbus.adr),
             wport.data.eq(wbus.dat_w),
             wport.en.eq(0 if self.read_only else write),
             wbus.dat_r.eq(rport.data),
-            wbus.ack.eq(strobe),
+            will_ack.eq(strobe & ~will_err),
+            will_err.eq(write.any() if self.read_only else 0),
+        ]
+        m.d.sync += [
+            wbus.ack.eq(will_ack),
+            wbus.err.eq(will_err),
         ]
 
     def elaborate(self, _: Optional[Platform]) -> Module:
@@ -125,25 +132,32 @@ class DualPortBRAM(Elaboratable):
         m.submodules.aw = aw = mem.write_port(granularity=8)
         m.submodules.br = br = mem.read_port(transparent=True)
         m.submodules.bw = bw = mem.write_port(granularity=8)
-        m.d.comb += self._connect_memory(self.abus, ar, aw)
-        m.d.comb += self._connect_memory(self.bbus, br, bw)
+        self._connect_memory(m, self.abus, ar, aw)
+        self._connect_memory(m, self.bbus, br, bw)
         return m
 
 
 class XilinxDualPortBRAM(DualPortBRAM):
 
-    def _connect_fasm(self, wbus: Record,
-                      port: macro.TrueDualPortRAM.Port) -> List[Statement]:
+    def _connect_fasm(self, m: Module, wbus: Record,
+                      port: macro.TrueDualPortRAM.Port):
         # Inspired by Wishbone B4 8.7.2
         strobe = wbus.cyc & wbus.stb
         write = Mux(strobe & wbus.we, wbus.sel, 0)
-        return [
+        will_ack = Signal()
+        will_err = Signal()
+        m.d.comb += [
             port.addr.eq(wbus.adr),
             port.di.eq(wbus.dat_w),
             port.en.eq(strobe),
             port.we.eq(0 if self.read_only else write),
             wbus.dat_r.eq(port.do),
-            wbus.ack.eq(strobe),
+            will_ack.eq(strobe & ~will_err),
+            will_err.eq(write.any() if self.read_only else 0),
+        ]
+        m.d.sync += [
+            wbus.ack.eq(will_ack),
+            wbus.err.eq(will_err),
         ]
 
     def elaborate(self, platform: Optional[Platform]) -> Module:
@@ -156,8 +170,8 @@ class XilinxDualPortBRAM(DualPortBRAM):
             port_a=macro.TrueDualPortRAM.Port(read_width=32, write_width=32),
             port_b=macro.TrueDualPortRAM.Port(read_width=32, write_width=32),
             init=self.bytes.ljust(4 * 1024, b'\0'))
-        m.d.comb += self._connect_fasm(self.abus, bram.port_a)
-        m.d.comb += self._connect_fasm(self.bbus, bram.port_b)
+        self._connect_fasm(m, self.abus, bram.port_a)
+        self._connect_fasm(m, self.bbus, bram.port_b)
         return m
 
 
