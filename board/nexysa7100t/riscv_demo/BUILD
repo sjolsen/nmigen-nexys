@@ -29,6 +29,7 @@ py_test(
         "//core:util",
         "//pip:minerva",
         "//pip:nmigen",
+        "//test:event",
         "//test:test_util",
     ],
 )

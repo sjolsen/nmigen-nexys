@@ -1,6 +1,6 @@
 import contextlib
 import os
-from typing import List, NamedTuple
+from typing import NamedTuple
 import unittest
 
 from nmigen import *
@@ -105,7 +105,8 @@ class RemoteBitbagTest(unittest.TestCase):
         sim = Simulator(m)
         sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
-        sim_events: List[event.TimestampedEvent] = []
+        events = event.EventSeries(timer.cycle_counter)
+        edge_monitor = event.EdgeMonitor(detectors)
 
         def transmit():
             yield Active()
@@ -120,11 +121,7 @@ class RemoteBitbagTest(unittest.TestCase):
             yield
 
         sim.add_sync_process(transmit)
-        sim.add_sync_process(
-            event.edge_monitor(
-                detectors=detectors,
-                cycle_counter=timer.cycle_counter,
-                callback=sim_events.append))
+        edge_monitor.attach(sim, events)
         sim.add_sync_process(timer.timeout_process)
         test_dir = test_util.BazelTestOutput(self.id())
         os.makedirs(test_dir, exist_ok=True)
@@ -133,8 +130,8 @@ class RemoteBitbagTest(unittest.TestCase):
                            traces=self._traces(rbb)):
             sim.run()
 
-        event.ShowEvents(sim_events)
-        event.ValidateConstraints(self, sim_events, constraints)
+        events.ShowEvents()
+        events.ValidateConstraints(self, constraints)
 
     def test_edges_blink(self):
         with self._run_edge_test('Bb') as ctx:
