@@ -7,8 +7,8 @@ MarkupSafe
 git+https://github.com/lambdaconcept/minerva.git@d06b5d2fd354cad3040f0efaf58b2f206395b7d0
 # file:/home/sjo/nmigen/minerva#egg=minerva
 # master as of 2020-04-07 17:59 PDT
-# git+https://github.com/nmigen/nmigen.git@0e40dc0a2d336945dfe0669207fe160cafff50dc#egg=nmigen
-file:/home/sjo/nmigen/nmigen#egg=nmigen
+git+https://github.com/nmigen/nmigen.git@0e40dc0a2d336945dfe0669207fe160cafff50dc#egg=nmigen
+# file:/home/sjo/nmigen/nmigen#egg=nmigen
 # master as of 2020-04-07 17:59 PDT
 git+https://github.com/nmigen/nmigen-boards.git@18315d8efc4b2d0569ff1abf19a92f495de7745d
 # git+file://C:/Users/Stuart/nmigen-boards@master

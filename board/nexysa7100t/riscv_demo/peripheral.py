@@ -127,7 +127,10 @@ class DualPortBRAM(Elaboratable):
             wbytes = self.bytes[i * 4:(i + 1) * 4]
             init_words.append(int.from_bytes(wbytes, byteorder='little'))
         m = Module()
-        mem = Memory(width=32, depth=4 * 1024, init=init_words)
+        # TODO: Revert to 4 kiB when https://github.com/nmigen/nmigen/issues/359
+        #   is fixed
+        # mem = Memory(width=32, depth=4 * 1024, init=init_words)
+        mem = Memory(width=32, depth=0x800, init=init_words[:0xC00 // 4])
         m.submodules.ar = ar = mem.read_port(transparent=True)
         m.submodules.aw = aw = mem.write_port(granularity=8)
         m.submodules.br = br = mem.read_port(transparent=True)
