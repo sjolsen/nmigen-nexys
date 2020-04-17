@@ -1,7 +1,7 @@
 def _baremetal_riscv_transition(settings, attr):
     _ignore = (settings, attr)
     return [
-        {"//command_line_option:platforms" : "//platforms:baremetal_riscv"},
+        {"//command_line_option:platforms" : "//bazel/platforms:baremetal_riscv"},
     ]
 
 baremetal_riscv_transition = transition(

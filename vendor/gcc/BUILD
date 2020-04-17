@@ -35,7 +35,7 @@ toolchain(
         "@platforms//os:linux",
     ],
     target_compatible_with = [
-        "//platforms/cpu:riscv",
+        "//bazel/platforms/cpu:riscv",
         "@platforms//os:none",
     ],
     toolchain = ":riscv_cc_toolchain",

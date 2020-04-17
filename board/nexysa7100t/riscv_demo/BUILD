@@ -58,7 +58,7 @@ cc_binary(
     linkopts = ["-ffreestanding", "-nostdlib", "-Wl,-T", "-Wl,$(location start.ld)"],
     # TODO: https://github.com/bazelbuild/bazel/issues/3780
     # target_compatible_with = [
-    #     "//platforms/cpu:riscv",
+    #     "//bazel/platforms/cpu:riscv",
     #     "@platforms//os:none",
     # ],
     tags = ["manual"],

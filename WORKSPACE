@@ -29,7 +29,7 @@ load("@pip_deps//:requirements.bzl", "pip_install")
 
 pip_install()
 
-register_execution_platforms("//platforms:baremetal_riscv")
+register_execution_platforms("//bazel/platforms:baremetal_riscv")
 
 register_toolchains(
     "//vendor/gcc:riscv_toolchain",
