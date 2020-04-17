@@ -1,6 +1,7 @@
 """nMigen support for https://store.digilentinc.com/nexys-a7-fpga-trainer-board-recommended-for-ece-curriculum/."""
 
 from absl import app
+from nmigen.build import *
 from nmigen_boards import nexys4ddr
 from nmigen_boards.test import blinky
 

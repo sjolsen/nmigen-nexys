@@ -1,7 +1,8 @@
 """Language-level utilities for nMigen."""
 
 import inspect
-from typing import Iterable, List, Optional
+import typing
+from typing import Iterable, List, Optional, Tuple, Union
 
 from nmigen import *
 from nmigen.build import Platform
@@ -11,6 +12,13 @@ from nmigen.utils import log2_int
 
 
 SIMULATION_CLOCK_FREQUENCY = 100_000_000
+
+
+def LikeNamedTuple(nt: Union[str, typing.NamedTupleMeta]) -> type:
+    if isinstance(nt, str):
+        return typing.ForwardRef(f'LikeNamedTuple({nt})')
+    field_types = tuple(nt.__annotations__[f] for f in nt._fields)
+    return Union[nt, Tuple.__getitem__(field_types)]
 
 
 def ProductRepr(obj: object) -> str:

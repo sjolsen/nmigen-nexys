@@ -22,8 +22,25 @@ py_library(
 )
 
 py_library(
+    name = "jtagtap",
+    deps = [
+        ":nmigen",
+        requirement("jtagtap"),
+    ],
+)
+
+py_library(
     name = "markupsafe",
     deps = [requirement("markupsafe")],
+)
+
+py_library(
+    name = "minerva",
+    deps = [
+        ":jtagtap",
+        ":nmigen",
+        requirement("minerva"),
+    ],
 )
 
 py_library(

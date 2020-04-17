@@ -33,6 +33,46 @@ class DataEvent(NamedTuple):
     byte: int
 
 
+class SPIMonitor(event.Monitor):
+
+    def __init__(self, tc: unittest.TestCase, pins: pmod_oled.PmodPins,
+                 decoder: spi.BusDecoder):
+        super().__init__()
+        self.tc = tc
+        self.pins = pins
+        self.decoder = decoder
+
+    def process(self) -> test_util.CoroutineProcess[None]:
+        yield Passive()
+        while True:
+            events = yield from test_util.WaitSync(self.decoder.events)
+            yield
+            if not (events & (1 << spi.BusEvent.START)):
+                continue
+            dc = None
+            bits = []
+            while True:
+                events = yield from test_util.WaitSync(self.decoder.events)
+                if events & (1 << spi.BusEvent.SAMPLE):
+                    bit = yield self.pins.mosi
+                    bits.append(bit)
+                    if len(bits) == 8:
+                        dc = yield self.pins.dc
+                        self.tc.assertIsNotNone(dc)
+                        self.tc.assertEqual(len(bits), 8)
+                        if dc:
+                            yield from self.emit(DataEvent(ByteFromBits(bits)))
+                        else:
+                            yield from self.emit(
+                                CommandEvent(ByteFromBits(bits)))
+                        dc = None
+                        bits = []
+                if events & (1 << spi.BusEvent.STOP):
+                    self.tc.assertEqual(bits, [])
+                yield
+            yield
+
+
 class PowerSequenceTest(unittest.TestCase):
     """Simulate and validate the power-sequencing logic."""
 
@@ -55,7 +95,9 @@ class PowerSequenceTest(unittest.TestCase):
         sim = Simulator(m)
         sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
 
-        sim_events: List[event.TimestampedEvent] = []
+        events = event.EventSeries(timer.cycle_counter)
+        edge_monitor = event.EdgeMonitor([reset_edge, vbatc_edge, vddc_edge])
+        spi_monitor = SPIMonitor(self, pins, decoder)
 
         def sequencer_process():
             yield sequencer.enable.eq(1)
@@ -67,47 +109,9 @@ class PowerSequenceTest(unittest.TestCase):
             yield from test_util.WaitSync(
                 sequencer.status == pmod_oled.PowerStatus.OFF)
 
-        def spi_monitor():
-            yield Passive()
-            while True:
-                events = yield from test_util.WaitSync(decoder.events)
-                yield
-                if not (events & (1 << spi.BusEvent.START)):
-                    continue
-                dc = None
-                bits = []
-                while True:
-                    events = yield from test_util.WaitSync(decoder.events)
-                    if events & (1 << spi.BusEvent.SAMPLE):
-                        bit = yield pins.mosi
-                        bits.append(bit)
-                        if len(bits) == 8:
-                            cycle = yield timer.cycle_counter
-                            dc = yield pins.dc
-                            self.assertIsNotNone(dc)
-                            self.assertEqual(len(bits), 8)
-                            if dc:
-                                ev = DataEvent(ByteFromBits(bits))
-                                sim_events.append(
-                                    event.TimestampedEvent(cycle, ev))
-                            else:
-                                ev = CommandEvent(ByteFromBits(bits))
-                                sim_events.append(
-                                    event.TimestampedEvent(cycle, ev))
-                            dc = None
-                            bits = []
-                    if events & (1 << spi.BusEvent.STOP):
-                        self.assertEqual(bits, [])
-                    yield
-                yield
-
         sim.add_sync_process(sequencer_process)
-        sim.add_sync_process(spi_monitor)
-        sim.add_sync_process(
-            event.edge_monitor(
-                detectors=[reset_edge, vbatc_edge, vddc_edge],
-                cycle_counter=timer.cycle_counter,
-                callback=sim_events.append))
+        spi_monitor.attach(sim, events)
+        edge_monitor.attach(sim, events)
         sim.add_sync_process(timer.timeout_process)
         test_dir = test_util.BazelTestOutput(self.id())
         os.makedirs(test_dir, exist_ok=True)
@@ -116,7 +120,7 @@ class PowerSequenceTest(unittest.TestCase):
                            traces=list(pins.fields.values())):
             sim.run()
 
-        event.ShowEvents(self, sim_events)
+        events.ShowEvents()
         expected: event.EventConstraints = [
             # Power on
             event.EdgeEvent(pins.vddc, 'fell'),
@@ -137,7 +141,7 @@ class PowerSequenceTest(unittest.TestCase):
             event.MinDelay(seconds=20.0e-6),
             event.EdgeEvent(pins.vddc, 'rose'),
         ]
-        event.ValidateConstraints(self, sim_events, expected)
+        events.ValidateConstraints(self, expected)
 
 
 if __name__ == '__main__':
