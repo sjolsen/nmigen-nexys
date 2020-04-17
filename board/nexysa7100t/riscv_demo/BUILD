@@ -11,7 +11,6 @@ package(default_visibility = ["//visibility:public"])
 py_library(
     name = "peripheral",
     srcs = ["peripheral.py"],
-    # TODO: Use the generated binary when target_compatible_with is supported
     data = [":start.bin"],
     deps = [
         "//core:util",
@@ -62,12 +61,12 @@ cc_binary(
     #     "//platforms/cpu:riscv",
     #     "@platforms//os:none",
     # ],
+    tags = ["manual"],
 )
 
 # Build with:
-# bazel build //board/nexysa7100t/riscv_demo:gen_start.bin --platforms=//platforms:baremetal_riscv --incompatible_enable_cc_toolchain_resolution
 riscv_flat_bin(
     name = "start_flat",
     src = ":start",
-    out = "gen_start.bin",
+    out = "start.bin",
 )

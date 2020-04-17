@@ -1,4 +1,5 @@
 MEMORY {
+    /* TODO: Generate the memory map from a single source of truth */
     brom (RXAL) : ORIGIN = 0x00000000, LENGTH = 32 * 1024
     bram (WXAL) : ORIGIN = 0x00001000, LENGTH = 32 * 1024
     periph (W!XAL) : ORIGIN = 0x00002000, LENGTH = 0x100
