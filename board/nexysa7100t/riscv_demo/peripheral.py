@@ -84,13 +84,19 @@ class DualPortBRAM(Elaboratable):
                  init: Optional[bytes] = None):
         super().__init__()
         self.read_only = read_only
-        self._init = {
-            'init_file': init_file,
-            'init': init,
-            # 'initp': initp,
-        }
+        self.bytes = self._init_bytes(init_file, init)
         self.abus = Record(wishbone.wishbone_layout)
         self.bbus = Record(wishbone.wishbone_layout)
+
+    def _init_bytes(self, init_file: Optional[str],
+                    init: Optional[bytes]) -> bytes:
+        if init is not None:
+            return init
+        elif init_file is not None:
+            with open(init_file, 'rb') as f:
+                return f.read()
+        else:
+            return bytes()
 
     def _connect_memory(self, wbus: Record, rport: ReadPort,
                         wport: WritePort) -> List[Statement]:
@@ -107,18 +113,11 @@ class DualPortBRAM(Elaboratable):
         ]
 
     def elaborate(self, _: Optional[Platform]) -> Module:
-        if self._init['init'] is not None:
-            init_bytes = self._init['init']
-        elif self._init['init_file'] is not None:
-            with open(self._init['init_file'], 'rb') as f:
-                init_bytes = f.read()
-        else:
-            init_bytes = bytes()
-        if len(init_bytes) % 4 != 0:
-            init_bytes.extend([0] * (4 - len(init_bytes) % 4))
+        if len(self.bytes) % 4 != 0:
+            self.bytes.extend([0] * (4 - len(self.bytes) % 4))
         init_words = []
-        for i in range(len(init_bytes) // 4):
-            wbytes = init_bytes[i * 4:(i + 1) * 4]
+        for i in range(len(self.bytes) // 4):
+            wbytes = self.bytes[i * 4:(i + 1) * 4]
             init_words.append(int.from_bytes(wbytes, byteorder='little'))
         m = Module()
         mem = Memory(width=32, depth=4 * 1024, init=init_words)
@@ -156,7 +155,7 @@ class XilinxDualPortBRAM(DualPortBRAM):
             bram_size='36Kb',
             port_a=macro.TrueDualPortRAM.Port(read_width=32, write_width=32),
             port_b=macro.TrueDualPortRAM.Port(read_width=32, write_width=32),
-            **self._init)
+            init=self.bytes.ljust(4 * 1024, b'\0'))
         m.d.comb += self._connect_fasm(self.abus, bram.port_a)
         m.d.comb += self._connect_fasm(self.bbus, bram.port_b)
         return m
