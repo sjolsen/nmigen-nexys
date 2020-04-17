@@ -1,4 +1,5 @@
 load("//bazel:top.bzl", "nmigen_design")
+load("//vendor/gcc:tools.bzl", "riscv_flat_bin")
 load(
     "@rules_python//python:defs.bzl",
     "py_library",
@@ -10,6 +11,7 @@ package(default_visibility = ["//visibility:public"])
 py_library(
     name = "peripheral",
     srcs = ["peripheral.py"],
+    # TODO: Use the generated binary when target_compatible_with is supported
     data = [":start.bin"],
     deps = [
         "//core:util",
@@ -47,4 +49,25 @@ nmigen_design(
         "//pip:minerva",
         "//pip:nmigen",
     ],
+)
+
+cc_binary(
+    name = "start",
+    srcs = ["start.S"],
+    additional_linker_inputs = ["start.ld"],
+    copts = ["-ffreestanding", "-nostdlib"],
+    linkopts = ["-ffreestanding", "-nostdlib", "-Wl,-T", "-Wl,$(location start.ld)"],
+    # TODO: https://github.com/bazelbuild/bazel/issues/3780
+    # target_compatible_with = [
+    #     "//platforms/cpu:riscv",
+    #     "@platforms//os:none",
+    # ],
+)
+
+# Build with:
+# bazel build //board/nexysa7100t/riscv_demo:gen_start.bin --platforms=//platforms:baremetal_riscv --incompatible_enable_cc_toolchain_resolution
+riscv_flat_bin(
+    name = "start_flat",
+    src = ":start",
+    out = "gen_start.bin",
 )
