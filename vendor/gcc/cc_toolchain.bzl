@@ -15,6 +15,7 @@ def _cc_toolchain_config(ctx):
     ]
     return cc_common.create_cc_toolchain_config_info(
         ctx = ctx,
+        cxx_builtin_include_directories = ctx.attr.cxx_builtin_include_directories,
         toolchain_identifier = ctx.attr.toolchain_identifier,
         host_system_name = ctx.attr.host_system_name,
         target_system_name = ctx.attr.target_system_name,
@@ -32,6 +33,7 @@ cc_toolchain_config = rule(
         # Custom args
         "installation_directory": attr.string(mandatory = True),
         # Standard args
+        "cxx_builtin_include_directories": attr.string_list(),
         "toolchain_identifier": attr.string(mandatory = True),
         "host_system_name": attr.string(mandatory = True),
         "target_system_name": attr.string(mandatory = True),

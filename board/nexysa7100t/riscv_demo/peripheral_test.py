@@ -5,6 +5,7 @@ from minerva import core
 from nmigen import *
 from nmigen.back.pysim import *
 from nmigen.hdl.rec import Record
+from rules_python.python.runfiles import runfiles
 
 from nmigen_nexys.board.nexysa7100t.riscv_demo import peripheral
 from nmigen_nexys.core import util
@@ -81,8 +82,10 @@ class PeripheralTest(unittest.TestCase):
 
     def test_activity(self):
         m = Module()
+        r = runfiles.Create()
         m.submodules.cpu = cpu = core.Minerva(with_debug=True)
-        m.submodules.periph = periph = peripheral.Peripherals()
+        m.submodules.periph = periph = peripheral.Peripherals(r.Rlocation(
+            'nmigen_nexys/board/nexysa7100t/riscv_demo/deadbeef.bin'))
         m.d.comb += cpu.ibus.connect(periph.ibus)
         m.d.comb += cpu.dbus.connect(periph.dbus)
         # TODO: enable timeout

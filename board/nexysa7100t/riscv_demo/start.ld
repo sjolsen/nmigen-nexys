@@ -20,11 +20,19 @@ SECTIONS {
     } >brom
 
     .data : {
+        __data_start = .;
         *(.data*)
+        . = ALIGN(4);
+        __data_end = .;
     } >bram AT>brom
+    __data_load = LOADADDR(.data);
 
     .bss : {
+        __bss_start = .;
+        . += 0x400;
+        __stack_top = .;
         *(.bss*)
+        __bss_end = .;
     } >bram
 
     .periph ORIGIN(periph) : {

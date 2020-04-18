@@ -6,7 +6,6 @@ from nmigen.build import *
 from nmigen.hdl.mem import *
 from nmigen.hdl.ast import Statement
 from nmigen.hdl.rec import Record
-from rules_python.python.runfiles import runfiles
 
 from nmigen_nexys.core import util
 from nmigen_nexys.display import seven_segment
@@ -272,8 +271,9 @@ class SevenSegmentDisplay(Elaboratable):
 
 class Peripherals(Elaboratable):
 
-    def __init__(self):
+    def __init__(self, rom_file: str):
         super().__init__()
+        self.rom_file = rom_file
         self.segments = Signal(8)
         self.anodes = Signal(8)
         self.ibus = Record(wishbone.wishbone_layout)
@@ -282,11 +282,9 @@ class Peripherals(Elaboratable):
     def elaborate(self, _: Optional[Platform]) -> Module:
         m = Module()
         # Set up ROM/RAM peripherals
-        r = runfiles.Create()
         m.submodules.rom = rom = XilinxDualPortBRAM(
             read_only=True,
-            init_file=r.Rlocation(
-                'nmigen_nexys/board/nexysa7100t/riscv_demo/start.bin'))
+            init_file=self.rom_file)
         m.submodules.ram = ram = XilinxDualPortBRAM()
         # Set up the display peripheral
         bank = seven_segment.DisplayBank()

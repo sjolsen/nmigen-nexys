@@ -2,6 +2,7 @@ from absl import app
 from minerva import core
 from nmigen import *
 from nmigen.build import *
+from rules_python.python.runfiles import runfiles
 
 from nmigen_nexys.bazel import top
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
@@ -31,7 +32,9 @@ class RiscvDemo(Elaboratable):
             cpu.jtag.trst.eq(rbb.jtag.trst),
         ]
         # Connect peripherals to the CPU and external world
-        m.submodules.periph = periph = peripheral.Peripherals()
+        r = runfiles.Create()
+        m.submodules.periph = periph = peripheral.Peripherals(r.Rlocation(
+            'nmigen_nexys/board/nexysa7100t/riscv_demo/main.bin'))
         m.d.comb += platform.request('display_7seg').eq(periph.segments)
         m.d.comb += platform.request('display_7seg_an').eq(periph.anodes)
         m.d.comb += cpu.ibus.connect(periph.ibus)
