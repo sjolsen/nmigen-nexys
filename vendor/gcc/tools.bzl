@@ -56,7 +56,7 @@ def riscv_cc_binary(name = None, srcs = [], linker_script = None, *args, **kwarg
         name = name,
         srcs = srcs,
         additional_linker_inputs = [linker_script],
-        copts = _RISCV_BAREMETAL_COPTS,
+        copts = _RISCV_BAREMETAL_COPTS + ["-g"],
         linkopts = _RISCV_BAREMETAL_COPTS + ["-Wl,-T", "-Wl,$(location %s)" % linker_script],
         # TODO: https://github.com/bazelbuild/bazel/issues/3780
         # target_compatible_with = [
