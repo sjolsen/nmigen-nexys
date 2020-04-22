@@ -11,9 +11,10 @@ ENTRY(_start)
 
 SECTIONS {
     .text : AT(0x00000000) {
-        _start = .;
+        *(.text.start)
         *(.text*)
     } >brom
+    ASSERT(_start == LOADADDR(.text), "_start must be placed at address zero")
 
     .rodata : {
         *(.rodata*)
@@ -27,10 +28,13 @@ SECTIONS {
     } >bram AT>brom
     __data_load = LOADADDR(.data);
 
-    .bss : {
-        __bss_start = .;
+    .stack : {
         . += 0x400;
         __stack_top = .;
+    } >bram
+
+    .bss : {
+        __bss_start = .;
         *(.bss*)
         __bss_end = .;
     } >bram

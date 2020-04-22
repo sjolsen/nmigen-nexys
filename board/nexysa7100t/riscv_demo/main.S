@@ -12,7 +12,7 @@
 
 .global main
 
-.section .text
+.section .text.start
 .global _start
 _start:
 0:  la t0, __data_load

@@ -3,7 +3,7 @@
 
 .global __periph_start
 
-.section .text
+.section .text.start
 .global _start
 _start:
 1:  la t0, __periph_start
