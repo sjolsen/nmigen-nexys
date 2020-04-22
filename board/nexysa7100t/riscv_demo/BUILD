@@ -1,5 +1,5 @@
 load("//bazel:top.bzl", "nmigen_design")
-load("//vendor/gcc:tools.bzl", "riscv_flat_bin")
+load("//vendor/gcc:tools.bzl", "riscv_cc_binary")
 load(
     "@rules_python//python:defs.bzl",
     "py_library",
@@ -8,26 +8,10 @@ load(
 
 package(default_visibility = ["//visibility:public"])
 
-# TODO: Automate these rules
-cc_binary(
+riscv_cc_binary(
     name = "deadbeef",
     srcs = ["deadbeef.S"],
-    additional_linker_inputs = ["start.ld"],
-    copts = ["-ffreestanding", "-nostdlib"],
-    linkopts = ["-ffreestanding", "-nostdlib", "-Wl,-T", "-Wl,$(location start.ld)"],
-    # TODO: https://github.com/bazelbuild/bazel/issues/3780
-    # target_compatible_with = [
-    #     "//bazel/platforms/cpu:riscv",
-    #     "@platforms//os:none",
-    # ],
-    tags = ["manual"],
-)
-
-# Build with:
-riscv_flat_bin(
-    name = "deadbeef_flat",
-    src = ":deadbeef",
-    out = "deadbeef.bin",
+    linker_script = "start.ld",
 )
 
 py_library(
@@ -74,26 +58,11 @@ nmigen_design(
     ],
 )
 
-cc_binary(
+riscv_cc_binary(
     name = "main",
     srcs = [
         "main.c",
         "main.S",
     ],
-    additional_linker_inputs = ["start.ld"],
-    copts = ["-ffreestanding", "-nostdlib"],
-    linkopts = ["-ffreestanding", "-nostdlib", "-Wl,-T", "-Wl,$(location start.ld)"],
-    # TODO: https://github.com/bazelbuild/bazel/issues/3780
-    # target_compatible_with = [
-    #     "//bazel/platforms/cpu:riscv",
-    #     "@platforms//os:none",
-    # ],
-    tags = ["manual"],
-)
-
-# Build with:
-riscv_flat_bin(
-    name = "main_flat",
-    src = ":main",
-    out = "main.bin",
+    linker_script = "start.ld",
 )

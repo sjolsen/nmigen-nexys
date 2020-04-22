@@ -44,3 +44,30 @@ riscv_flat_bin = rule(
         "bin": "%{out}",
     }
 )
+
+_RISCV_BAREMETAL_COPTS = ["-ffreestanding", "-nostdlib"]
+
+def riscv_cc_binary(name = None, srcs = [], linker_script = None, *args, **kwargs):
+    if args:
+        fail("Illegal positional arguments", args)
+    if linker_script == None:
+        fail("Must provide a linker script", linker_script)
+    native.cc_binary(
+        name = name,
+        srcs = srcs,
+        additional_linker_inputs = [linker_script],
+        copts = _RISCV_BAREMETAL_COPTS,
+        linkopts = _RISCV_BAREMETAL_COPTS + ["-Wl,-T", "-Wl,$(location %s)" % linker_script],
+        # TODO: https://github.com/bazelbuild/bazel/issues/3780
+        # target_compatible_with = [
+        #     "//bazel/platforms/cpu:riscv",
+        #     "@platforms//os:none",
+        # ],
+        tags = ["manual"],
+        **kwargs
+    )
+    riscv_flat_bin(
+        name = "%s_flat" % name,
+        src = name,
+        out = "%s.bin" % name,
+    )
