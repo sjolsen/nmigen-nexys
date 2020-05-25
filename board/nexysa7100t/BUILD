@@ -133,6 +133,21 @@ nmigen_design(
 )
 
 nmigen_design(
+    name = "synth_demo",
+    size = "small",
+    srcs = ["synth_demo.py"],
+    deps = [
+        ":nexysa7100t",
+        "//bazel:top",
+        "//core:timer",
+        "//core:util",
+        "//math:delta_sigma",
+        "//pip:absl",
+        "//pip:nmigen",
+    ],
+)
+
+nmigen_design(
     name = "uart_demo",
     size = "small",
     srcs = ["uart_demo.py"],
