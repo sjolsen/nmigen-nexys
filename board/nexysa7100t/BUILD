@@ -142,6 +142,7 @@ nmigen_design(
         "//core:timer",
         "//core:util",
         "//math:delta_sigma",
+        "//math:trig",
         "//pip:absl",
         "//pip:nmigen",
     ],

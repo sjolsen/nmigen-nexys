@@ -9,12 +9,7 @@ from nmigen_nexys.board.nexysa7100t import nexysa7100t
 from nmigen_nexys.core import timer
 from nmigen_nexys.core import util
 from nmigen_nexys.math import delta_sigma
-
-
-A4 = 440
-C4 = A4 / 2**(9/12)
-E4 = A4 / 2**(5/12)
-G4 = A4 / 2**(2/12)
+from nmigen_nexys.math import trig
 
 
 class Demo(Elaboratable):
@@ -22,22 +17,43 @@ class Demo(Elaboratable):
     def elaborate(self, platform: Platform) -> Module:
         m = Module()
         synths = []
-        for i, freq in enumerate([C4, E4, G4]):
+        synth_en = []
+        for i in range(16):
+            freq = 220 * 2**((15 - i) / 12)
             switch = platform.request('switch', i)
+            led = platform.request('led', i)
             freq_timer = timer.DownTimer(period=util.GetClockFreq(platform) / (2**12 * freq))
             m.submodules += freq_timer
-            synth = Signal(signed(12))
+            synth = Signal(12)
             with m.If(freq_timer.triggered):
                 m.d.sync += synth.eq(synth + 1)
-            masked = Signal(signed(16))
-            m.d.comb += masked.eq(Mux(switch, synth >> 4, 0))
-            synths.append(masked)
+            synths.append(synth)
+            synth_en.append(switch)
+            m.d.comb += led.eq(switch)
         # Sample at 44.1 kHz
         m.submodules.sample_timer = sample_timer = timer.DownTimer(
             period=fractions.Fraction(util.GetClockFreq(platform), 44_100))
         sample = Signal(signed(16))
-        with m.If(sample_timer.triggered):
-            m.d.sync += sample.eq(sum(synths))
+        # Share a LUT
+        m.submodules.sine = sine = trig.SineLUT(Signal(12), Signal(signed(12)))
+        next_sample = Signal.like(sample)
+        with m.FSM(reset='IDLE'):
+            with m.State('IDLE'):
+                with m.If(sample_timer.triggered):
+                    m.d.sync += next_sample.eq(0)
+                    m.next = 'SAMPLE0'
+            for i, synth in enumerate(synths):
+                with m.State(f'SAMPLE{i}'):
+                    m.d.comb += sine.input.eq(synth)
+                    with m.If(synth_en[i]):
+                        m.d.sync += next_sample.eq(next_sample + sine.output)
+                    if i + 1 == len(synths):
+                        m.next = 'DONE'
+                    else:
+                        m.next = f'SAMPLE{i + 1}'
+            with m.State('DONE'):
+                m.d.sync += sample.eq(next_sample)
+                m.next = 'IDLE'
         m.submodules.pdm = pdm = delta_sigma.Modulator(sample.width)
         m.d.comb += pdm.input.eq(sample)
         audio = platform.request('audio', 0)
