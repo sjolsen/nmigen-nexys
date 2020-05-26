@@ -26,7 +26,6 @@ class AudioPhaseGenerator(Elaboratable):
         self.note = Signal(self.DELTA_DEPTH)
         self.octave = Signal(4)
         self.phase_word = Signal(phase_depth)
-        self.update = Signal(reset=0)
 
     @classmethod
     def CanonicalDelta(cls, text: str, platform: Optional[Platform]) -> int:
@@ -45,13 +44,8 @@ class AudioPhaseGenerator(Elaboratable):
         m = Module()
         delta_word = Signal(self.DELTA_DEPTH)
         wheel = Signal.like(delta_word)
-        new_delta = Signal.like(delta_word)
-        m.d.comb += new_delta.eq(self.note >> (15 - self.octave))
-        with m.If(self.update & (new_delta != delta_word)):
-            m.d.sync += delta_word.eq(new_delta)
-            m.d.sync += wheel.eq(0)
-        with m.Else():
-            m.d.sync += wheel.eq(wheel + delta_word)
+        m.d.comb += delta_word.eq(self.note >> (15 - self.octave))
+        m.d.sync += wheel.eq(wheel + delta_word)
         m.d.comb += self.phase_word.eq(wheel[-self.phase_word.width:])
         return m
 
@@ -66,7 +60,6 @@ class SampleLoop(Elaboratable):
         self.playing = Signal()
         self.note = Signal(AudioPhaseGenerator.DELTA_DEPTH)
         self.octave = Signal(4)
-        self.tick = Signal()
         self.volume = Signal()
 
     def elaborate(self, platform: Optional[Platform]) -> Module:
@@ -92,19 +85,16 @@ class SampleLoop(Elaboratable):
         m.submodules.beat = beat = timer.DownTimer(fractions.Fraction(util.GetClockFreq(platform), bps))
         # Run through once when instructed
         m.d.sync += beat.reload.eq(0)  # Default
-        m.d.sync += self.tick.eq(0)  # Default
         with m.FSM(reset='IDLE'):
             with m.State('IDLE'):
                 with m.If(self.start):
                     m.d.sync += i.eq(0)
                     m.d.sync += beat.reload.eq(1)
-                    m.d.sync += self.tick.eq(1)  # Trigger first sample immediately
                     m.next = 'PLAYING'
             with m.State('PLAYING'):
                 m.d.comb += self.playing.eq(1)
                 with m.If(beat.triggered):
                     m.d.sync += i.eq(i + 1)
-                    m.d.sync += self.tick.eq(1)  # Delay one cycle to pick up array updates
                 with m.If(i + 1 == len(self.data)):
                     m.next = 'IDLE'
         return m
@@ -146,7 +136,6 @@ class SynthDemo(Elaboratable):
         m.d.comb += loop.start.eq(self.start)
         m.d.comb += phi.note.eq(loop.note)
         m.d.comb += phi.octave.eq(loop.octave)
-        m.d.comb += phi.update.eq(loop.tick)
         # Sample at 44.1 kHz
         m.submodules.sample_timer = sample_timer = timer.DownTimer(
             period=fractions.Fraction(util.GetClockFreq(platform), 44_100))
