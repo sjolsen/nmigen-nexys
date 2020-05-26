@@ -35,18 +35,18 @@ class AudioPhaseGenerator(Elaboratable):
         notes = {'A': 0, 'B': 2, 'C': -9, 'D': -7, 'E': -5, 'F': -4, 'G': -2}
         accidentals = {'𝄫': -2, '♭': -1, '♮': 0, '♯': 1, '𝄪': 2}
         semitones = notes[note.upper()] + accidentals[accidental or '♮']
-        octave = 15
+        octave = 0
         A4 = 440
         frequency = A4 * 2**(octave - 4 + semitones / 12)
         return int(round(frequency * 2**cls.DELTA_DEPTH / util.GetClockFreq(platform)))
 
     def elaborate(self, platform: Optional[Platform]) -> Module:
         m = Module()
-        delta_word = Signal(self.DELTA_DEPTH)
-        wheel = Signal.like(delta_word)
-        m.d.comb += delta_word.eq(self.note >> (15 - self.octave))
-        m.d.sync += wheel.eq(wheel + delta_word)
-        m.d.comb += self.phase_word.eq(wheel[-self.phase_word.width:])
+        wheel = Signal(self.DELTA_DEPTH)
+        m.d.sync += wheel.eq(wheel + self.note)
+        scaled = Signal(self.DELTA_DEPTH)
+        m.d.comb += scaled.eq(wheel << self.octave)
+        m.d.comb += self.phase_word.eq(scaled[-self.phase_word.width:])
         return m
 
 

@@ -148,6 +148,18 @@ nmigen_design(
     ],
 )
 
+py_test(
+    name = "synth_demo_test",
+    size = "small",
+    srcs = ["synth_demo_test.py"],
+    deps = [
+        ":synth_demo",
+        "//core:util",
+        "//pip:nmigen",
+        "//test:test_util",
+    ],
+)
+
 nmigen_design(
     name = "uart_demo",
     size = "small",
