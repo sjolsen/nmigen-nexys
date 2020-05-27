@@ -5,7 +5,8 @@ from typing import Iterable, Optional
 from absl import app
 from nmigen import *
 from nmigen.build import *
-from nmigen.lib.cdc import *
+from nmigen.hdl.ast import Statement
+from nmigen.lib.cdc import FFSynchronizer
 
 from nmigen_nexys.bazel import top
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
@@ -25,7 +26,7 @@ def Parse12TETNote(text: str) -> int:
     accidentals = {'𝄫': -2, '♭': -1, '♮': 0, '♯': 1, '𝄪': 2}
     note = notes[m_note.upper()]
     accidental = accidentals[m_accidental or '♮']
-    octave = 1 + int(m_octave, base=10)
+    octave = 1 + int(m_octave, base=10)  # Note the zero-based octave instead of -1-based
     midi = 12 * octave + note + accidental
     if not 0 <= midi <= 127:
         raise ValueError(f'Note out of range: {repr(text)} = {midi}')
@@ -94,11 +95,7 @@ class TwelveTETPhaseArray(Elaboratable):
         ]
         self.tones = Array(self._tones)
 
-    def note_phase(self, note: str) -> Value:
-        # TODO: Dynamic API
-        midi = Parse12TETNote(note)
-        octave = midi // 12  # Note the zero-based octave instead of -1-based
-        tone = midi % 12
+    def note_phase(self, tone: Value, octave: Value) -> Value:
         phase_word = self.tones[tone].phase_word
         scaled = phase_word >> (self.octaves - 1 - octave)
         return scaled[:self.phase_depth]
@@ -112,22 +109,22 @@ class TwelveTETPhaseArray(Elaboratable):
 class SampleLoop(Elaboratable):
 
     def __init__(self, tempo: int, data: Iterable[Optional[str]],
-                 phi: TwelveTETPhaseArray):
+                 octaves: int):
         super().__init__()
         self.tempo = tempo
         self.data = data
-        self.phi = phi
+        self.octaves = octaves
         self.start = Signal()
-        self.playing = Signal(reset=0)
-        self.phase = Signal(phi.phase_depth)
+        self.notes = Signal(octaves * 12)
 
     def elaborate(self, platform: Optional[Platform]) -> Module:
         m = Module()
-        playing = []
-        phases = []
+        sequence = []
         for datum in self.data:
-            playing.append(int(datum is not None))
-            phases.append(self.phi.note_phase(datum or 'A4'))
+            notes = Signal.like(self.notes)
+            for note in datum:
+                m.d.comb += notes[Parse12TETNote(note)].eq(1)
+            sequence.append(notes)
         i = Signal(range(len(self.data)), reset=0)
         bps = fractions.Fraction(self.tempo, 60)
         m.submodules.beat = beat = timer.DownTimer(
@@ -141,12 +138,83 @@ class SampleLoop(Elaboratable):
                     m.d.sync += beat.reload.eq(1)
                     m.next = 'PLAYING'
             with m.State('PLAYING'):
-                m.d.comb += self.playing.eq(Array(playing)[i])
-                m.d.comb += self.phase.eq(Array(phases)[i])
+                m.d.comb += self.notes.eq(Array(sequence)[i])
                 with m.If(beat.triggered):
                     m.d.sync += i.eq(i + 1)
                 with m.If(i + 1 == len(self.data)):
                     m.next = 'IDLE'
+        return m
+
+
+# TODO: Better
+def SatAdd(m: Module, lhs: Signal, rhs: Value) -> Statement:
+    plus = Signal(
+        Shape(signed=lhs.signed, width=lhs.width + 1),
+        name=f'{lhs.name}_plus_{rhs.name}')
+    m.d.comb += plus.eq(lhs + rhs)
+    return lhs.eq(
+        Mux(
+            plus > util.ShapeMax(lhs.shape()),
+            util.ShapeMax(lhs.shape()),
+            Mux(
+                plus < util.ShapeMin(lhs.shape()),
+                util.ShapeMin(lhs.shape()),
+                plus)))
+
+
+class Mixer(Elaboratable):
+
+    def __init__(self, notes: Value, phi: TwelveTETPhaseArray,
+                 bit_depth: int = 16):
+        super().__init__()
+        self.notes = notes
+        self.phi = phi
+        self.bit_depth = bit_depth
+        self.sample = Signal(bit_depth)
+        self.update = Signal()
+
+    def elaborate(self, platform: Optional[Platform]) -> Module:
+        m = Module()
+        # Tone generator
+        m.submodules.sin = sin = trig.SineLUT(
+            input=Signal(self.phi.phase_depth), output=Signal(signed(12)))
+        # Sample at 44.1 kHz
+        m.submodules.sample_timer = sample_timer = timer.DownTimer(
+            period=fractions.Fraction(util.GetClockFreq(platform), 44_100))
+        sample = Signal.like(self.sample)
+        notes = Signal.like(self.notes)
+        tone = Signal(range(12))
+        octave = Signal(range(self.phi.octaves))
+        m.d.sync += self.update.eq(0)  # Default
+        with m.FSM(reset='IDLE'):
+            with m.State('IDLE'):
+                with m.If(sample_timer.triggered):
+                    with m.If(self.notes):
+                        m.d.sync += sample.eq(0)
+                        m.d.sync += notes.eq(self.notes)
+                        m.d.sync += tone.eq(0)
+                        m.d.sync += octave.eq(0)
+                        m.next = 'SAMPLING'
+                    with m.Else():
+                        m.d.sync += self.sample.eq(0)
+                        m.d.sync += self.update.eq(1)
+            with m.State('SAMPLING'):
+                m.d.comb += sin.input.eq(self.phi.note_phase(tone, octave))
+                with m.If(notes[0]):
+                    # m.d.sync += SatAdd(m, sample, sin.output)
+                    m.d.sync += sample.eq(sample + sin.output)  # TODO: Saturating addition
+                m.d.sync += notes.eq(notes >> 1)
+                with m.If(tone + 1 == 12):
+                    m.d.sync += tone.eq(0)
+                    m.d.sync += octave.eq(octave + 1)
+                with m.Else():
+                    m.d.sync += tone.eq(tone + 1)
+                with m.If(~(notes >> 1).any()):
+                    m.next = 'UPDATE'
+            with m.State('UPDATE'):
+                m.d.sync += self.sample.eq(sample)
+                m.d.sync += self.update.eq(1)
+                m.next = 'IDLE'
         return m
 
 
@@ -159,43 +227,33 @@ class SynthDemo(Elaboratable):
 
     def elaborate(self, platform: Optional[Platform]) -> Module:
         m = Module()
-        # Sample loop
         m.submodules.phi = phi = TwelveTETPhaseArray()
+        # Sample loop
         m.submodules.loop = loop = SampleLoop(360, [
-            'E5',
-            'F♯5',
-            'G5',
-            'A5',
-            'F♯5',
-            'F♯5',
-            'D5',
-            'E5',
+            ['E4', 'A4', 'D5'],
+            ['E5'],
+            ['F5'],
+            ['G5'],
+            ['D4', 'G4', 'C5', 'E5'],
+            ['E5'],
+            ['C5'],
+            ['B♭3', 'C4', 'F4', 'D5'],
             # -----
-            'E5',
-            'E5',
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-        ], phi)
+            ['B♭3', 'C4', 'F4', 'D5'],
+            ['B♭3', 'C4', 'F4', 'D5'],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+        ], phi.octaves)
         m.d.comb += loop.start.eq(self.start)
-        # Tone generator
-        m.submodules.sin = sin = trig.SineLUT(input=loop.phase,
-                                              output=Signal(signed(12)))
-        # Sample at 44.1 kHz
-        m.submodules.sample_timer = sample_timer = timer.DownTimer(
-            period=fractions.Fraction(util.GetClockFreq(platform), 44_100))
-        sample = Signal(signed(16))
-        with m.If(sample_timer.triggered):
-            with m.If(loop.playing):
-                m.d.sync += sample.eq(sin.output)
-            with m.Else():
-                m.d.sync += sample.eq(0)
+        # Mixer
+        m.submodules.mixer = mixer = Mixer(loop.notes, phi)
         # Pulse-density modulated output processed by on-board LPF
-        m.submodules.pdm = pdm = delta_sigma.Modulator(sample.width)
-        m.d.comb += pdm.input.eq(sample)
+        m.submodules.pdm = pdm = delta_sigma.Modulator(mixer.sample.width)
+        m.d.comb += pdm.input.eq(mixer.sample)
         m.d.comb += self.pdm_output.eq(pdm.output)
         return m
 
