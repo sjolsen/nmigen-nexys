@@ -204,7 +204,7 @@ class BasicMIDISink(Elaboratable):
                     note = data.words_out[1]
                     velocity = data.words_out[0]
                     m.d.sync += channel.eq(channel & ~(1 << note))
-                    m.d.sync += cmd.eq(0)
+                    m.d.sync += data_remaining.eq(2)
                 with m.Case('1001----'):
                     # Note on
                     note = data.words_out[1]
@@ -213,7 +213,7 @@ class BasicMIDISink(Elaboratable):
                         m.d.sync += channel.eq(channel | (1 << note))
                     with m.Else():
                         m.d.sync += channel.eq(channel & ~(1 << note))
-                    m.d.sync += cmd.eq(0)
+                    m.d.sync += data_remaining.eq(2)
         return m
 
 
