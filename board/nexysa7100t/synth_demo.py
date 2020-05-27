@@ -172,21 +172,17 @@ class BasicMIDISink(Elaboratable):
         super().__init__()
         self.baud_rate = baud_rate
         self.rx = Signal()
-        self.notes = Signal(128)
+        self.channels = Array([Signal(128) for _ in range(16)])
 
     def elaborate(self, platform: Optional[Platform]) -> Module:
         m = Module()
         m.submodules.rx = rx = uart.Receive(self.baud_rate)
         m.d.comb += rx.input.eq(self.rx)
         cmd = Signal(8)
+        channel = self.channels[cmd[:4]]
         m.submodules.data = data = shift_register.ArrayUp(width=7, count=2)
         data_remaining = Signal(range(data.count + 1))
         m.d.comb += data.word_in.eq(rx.data[:7])
-        channels = Array([Signal.like(self.notes) for _ in range(16)])
-        m.d.comb += self.notes.eq(Cat(*[
-            util.Any(c[i] for c in channels)
-            for i in range(self.notes.width)
-        ]))
         with m.If(rx.done):
             with m.Switch(rx.data):
                 with m.Case('1000----'):
@@ -205,17 +201,15 @@ class BasicMIDISink(Elaboratable):
             with m.Switch(cmd):
                 with m.Case('1000----'):
                     # Note off
-                    channel = cmd[:4]
                     note = data.words_out[1]
                     velocity = data.words_out[0]
-                    m.d.sync += channels[channel].eq(channels[channel] & ~(1 << note))
+                    m.d.sync += channel.eq(channel & ~(1 << note))
                     m.d.sync += cmd.eq(0)
                 with m.Case('1001----'):
                     # Note on
-                    channel = cmd[:4]
                     note = data.words_out[1]
                     velocity = data.words_out[0]
-                    m.d.sync += channels[channel].eq(channels[channel] | (1 << note))
+                    m.d.sync += channel.eq(channel | (1 << note))
                     m.d.sync += cmd.eq(0)
         return m
 
@@ -283,6 +277,7 @@ class SynthDemo(Elaboratable):
         self.rx = Signal()
         self.start = Signal()
         self.pdm_output = Signal()
+        self.channels = Signal(16)
 
     def elaborate(self, platform: Optional[Platform]) -> Module:
         m = Module()
@@ -311,9 +306,15 @@ class SynthDemo(Elaboratable):
         # MIDI sink
         m.submodules.midi = midi = BasicMIDISink(baud_rate=115_200)
         m.d.comb += midi.rx.eq(self.rx)
+        midi_notes = Signal.like(midi.channels[0])
+        for i in range(midi_notes.width):
+            m.d.comb += midi_notes[i].eq(
+                util.Any(c[i] for c in midi.channels))
+            m.d.comb += self.channels.eq(
+                Cat(*[c.any() for c in midi.channels]))
         # Mixer
         notes = Signal(12 * phi.octaves)
-        m.d.comb += notes.eq(Mux(loop.playing, loop.notes, midi.notes))
+        m.d.comb += notes.eq(Mux(loop.playing, loop.notes, midi_notes))
         m.submodules.mixer = mixer = Mixer(notes, phi)
         # Pulse-density modulated output processed by on-board LPF
         m.submodules.pdm = pdm = delta_sigma.Modulator(mixer.sample.width)
@@ -334,6 +335,8 @@ class SynthDemoDriver(Elaboratable):
         audio = platform.request('audio', 0)
         m.d.comb += audio.pwm.eq(demo.pdm_output)
         m.d.comb += audio.sd.eq(0)  # No shutdown
+        leds = Cat(*[platform.request('led', i) for i in range(16)])
+        m.d.comb += leds.eq(demo.channels)
         return m
 
 

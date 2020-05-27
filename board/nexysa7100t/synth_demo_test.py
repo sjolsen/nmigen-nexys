@@ -38,9 +38,9 @@ class BasicMIDISinkTest(unittest.TestCase):
         def check():
             yield Active()
             yield from test_util.WaitSync(
-                midi.notes[synth_demo.Parse12TETNote('A4')])
+                midi.channels[0][synth_demo.Parse12TETNote('A4')])
             yield from test_util.WaitSync(
-                ~midi.notes[synth_demo.Parse12TETNote('A4')])
+                ~midi.channels[0][synth_demo.Parse12TETNote('A4')])
 
         sim.add_sync_process(driver)
         sim.add_sync_process(check)
@@ -49,7 +49,7 @@ class BasicMIDISinkTest(unittest.TestCase):
         os.makedirs(test_dir, exist_ok=True)
         with sim.write_vcd(os.path.join(test_dir, "test.vcd"),
                            os.path.join(test_dir, "test.gtkw"),
-                           traces=[tx.output, midi.notes]):
+                           traces=[tx.output, midi.channels[0]]):
             sim.run()
 
 
