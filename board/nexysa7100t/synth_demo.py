@@ -10,10 +10,12 @@ from nmigen.lib.cdc import FFSynchronizer
 
 from nmigen_nexys.bazel import top
 from nmigen_nexys.board.nexysa7100t import nexysa7100t
+from nmigen_nexys.core import shift_register
 from nmigen_nexys.core import timer
 from nmigen_nexys.core import util
 from nmigen_nexys.math import delta_sigma
 from nmigen_nexys.math import trig
+from nmigen_nexys.serial import uart
 
 
 def Parse12TETNote(text: str) -> int:
@@ -35,7 +37,7 @@ def Parse12TETNote(text: str) -> int:
 
 class BasicTonePhaseGenerator(Elaboratable):
 
-    def __init__(self, fundamental: float, *, octaves: int = 8,
+    def __init__(self, fundamental: float, *, octaves: int = 16,
                  cents_precision: int = 5, phase_depth: int = 12):
         super().__init__()
         self.fundamental = fundamental
@@ -116,6 +118,7 @@ class SampleLoop(Elaboratable):
         self.octaves = octaves
         self.start = Signal()
         self.notes = Signal(octaves * 12)
+        self.playing = Signal()
 
     def elaborate(self, platform: Optional[Platform]) -> Module:
         m = Module()
@@ -138,6 +141,7 @@ class SampleLoop(Elaboratable):
                     m.d.sync += beat.reload.eq(1)
                     m.next = 'PLAYING'
             with m.State('PLAYING'):
+                m.d.comb += self.playing.eq(1)
                 m.d.comb += self.notes.eq(Array(sequence)[i])
                 with m.If(beat.triggered):
                     m.d.sync += i.eq(i + 1)
@@ -160,6 +164,60 @@ def SatAdd(m: Module, lhs: Signal, rhs: Value) -> Statement:
                 plus < util.ShapeMin(lhs.shape()),
                 util.ShapeMin(lhs.shape()),
                 plus)))
+
+
+class BasicMIDISink(Elaboratable):
+
+    def __init__(self, *, baud_rate: int = 31_250):
+        super().__init__()
+        self.baud_rate = baud_rate
+        self.rx = Signal()
+        self.notes = Signal(128)
+
+    def elaborate(self, platform: Optional[Platform]) -> Module:
+        m = Module()
+        m.submodules.rx = rx = uart.Receive(self.baud_rate)
+        m.d.comb += rx.input.eq(self.rx)
+        cmd = Signal(8)
+        m.submodules.data = data = shift_register.ArrayUp(width=7, count=2)
+        data_remaining = Signal(range(data.count + 1))
+        m.d.comb += data.word_in.eq(rx.data[:7])
+        channels = Array([Signal.like(self.notes) for _ in range(16)])
+        m.d.comb += self.notes.eq(Cat(*[
+            util.Any(c[i] for c in channels)
+            for i in range(self.notes.width)
+        ]))
+        with m.If(rx.done):
+            with m.Switch(rx.data):
+                with m.Case('1000----'):
+                    # Note off
+                    m.d.sync += cmd.eq(rx.data)
+                    m.d.sync += data_remaining.eq(2)
+                with m.Case('1001----'):
+                    # Note on
+                    m.d.sync += cmd.eq(rx.data)
+                    m.d.sync += data_remaining.eq(2)
+                with m.Case('0-------'):
+                    m.d.comb += data.shift.eq(1)
+                    with m.If(data_remaining):
+                        m.d.sync += data_remaining.eq(data_remaining - 1)
+        with m.If(data_remaining == 0):
+            with m.Switch(cmd):
+                with m.Case('1000----'):
+                    # Note off
+                    channel = cmd[:4]
+                    note = data.words_out[1]
+                    velocity = data.words_out[0]
+                    m.d.sync += channels[channel].eq(channels[channel] & ~(1 << note))
+                    m.d.sync += cmd.eq(0)
+                with m.Case('1001----'):
+                    # Note on
+                    channel = cmd[:4]
+                    note = data.words_out[1]
+                    velocity = data.words_out[0]
+                    m.d.sync += channels[channel].eq(channels[channel] | (1 << note))
+                    m.d.sync += cmd.eq(0)
+        return m
 
 
 class Mixer(Elaboratable):
@@ -222,6 +280,7 @@ class SynthDemo(Elaboratable):
 
     def __init__(self):
         super().__init__()
+        self.rx = Signal()
         self.start = Signal()
         self.pdm_output = Signal()
 
@@ -249,8 +308,13 @@ class SynthDemo(Elaboratable):
             [],
         ], phi.octaves)
         m.d.comb += loop.start.eq(self.start)
+        # MIDI sink
+        m.submodules.midi = midi = BasicMIDISink(baud_rate=115_200)
+        m.d.comb += midi.rx.eq(self.rx)
         # Mixer
-        m.submodules.mixer = mixer = Mixer(loop.notes, phi)
+        notes = Signal(12 * phi.octaves)
+        m.d.comb += notes.eq(Mux(loop.playing, loop.notes, midi.notes))
+        m.submodules.mixer = mixer = Mixer(notes, phi)
         # Pulse-density modulated output processed by on-board LPF
         m.submodules.pdm = pdm = delta_sigma.Modulator(mixer.sample.width)
         m.d.comb += pdm.input.eq(mixer.sample)
@@ -265,6 +329,8 @@ class SynthDemoDriver(Elaboratable):
         m.submodules.demo = demo = SynthDemo()
         go = platform.request('button_center')
         m.submodules.go_sync = FFSynchronizer(go, demo.start)
+        rx = platform.request('uart', 0).rx
+        m.submodules.rx_sync = FFSynchronizer(rx, demo.rx)
         audio = platform.request('audio', 0)
         m.d.comb += audio.pwm.eq(demo.pdm_output)
         m.d.comb += audio.sd.eq(0)  # No shutdown

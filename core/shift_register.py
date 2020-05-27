@@ -58,3 +58,50 @@ class Down(Register):
         with m.Elif(self.shift):
             m.d.sync += reg.eq(Cat(reg[1:], self.bit_in))
         return m
+
+
+class ArrayRegister(Elaboratable):
+    """Common interface for up- and down-shifting array registers."""
+
+    def __init__(self, *, width: int, count: int, reset: int = 0):
+        super().__init__()
+        self.width = width
+        self.count = count
+        self.reset = reset
+        self.words_in = Array([Signal(width) for _ in range(count)])
+        self.words_out = Array([Signal(width) for _ in range(count)])
+        self.latch = Signal()
+        self.word_in = Signal(width)
+        self.shift = Signal()
+
+    @abc.abstractmethod
+    def elaborate(self, _: Platform) -> Module:
+        pass
+
+
+class ArrayUp(ArrayRegister):
+    """Up- or left-shifting register."""
+
+    def elaborate(self, _: Platform) -> Module:
+        m = Module()
+        reg = Signal(self.width * self.count, reset=self.reset)
+        m.d.comb += Cat(*self.words_out).eq(reg)
+        with m.If(self.latch):
+            m.d.sync += reg.eq(Cat(*self.words_in))
+        with m.Elif(self.shift):
+            m.d.sync += reg.eq(Cat(self.word_in, reg[:-self.width]))
+        return m
+
+
+class ArrayDown(ArrayRegister):
+    """Down- or right-shifting register."""
+
+    def elaborate(self, _: Platform) -> Module:
+        m = Module()
+        reg = Signal(self.width * self.count, reset=self.reset)
+        m.d.comb += self.words_out.eq(reg)
+        with m.If(self.latch):
+            m.d.sync += reg.eq(self.words_in)
+        with m.Elif(self.shift):
+            m.d.sync += reg.eq(Cat(reg[self.width:], self.word_in))
+        return m

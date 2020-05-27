@@ -139,12 +139,14 @@ nmigen_design(
     deps = [
         ":nexysa7100t",
         "//bazel:top",
+        "//core:shift_register",
         "//core:timer",
         "//core:util",
         "//math:delta_sigma",
         "//math:trig",
         "//pip:absl",
         "//pip:nmigen",
+        "//serial:uart",
     ],
 )
 
@@ -155,7 +157,9 @@ py_test(
     deps = [
         ":synth_demo",
         "//core:util",
+        "//pip:mido",
         "//pip:nmigen",
+        "//serial:uart",
         "//test:test_util",
     ],
 )

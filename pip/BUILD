@@ -35,6 +35,11 @@ py_library(
 )
 
 py_library(
+    name = "mido",
+    deps = [requirement("mido")],
+)
+
+py_library(
     name = "minerva",
     deps = [
         ":jtagtap",
