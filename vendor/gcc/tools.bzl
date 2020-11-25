@@ -1,13 +1,17 @@
 def _baremetal_riscv_transition(settings, attr):
     _ignore = (settings, attr)
-    return [
-        {"//command_line_option:platforms" : "//bazel/platforms:baremetal_riscv"},
-    ]
+    return {
+        "//command_line_option:collect_code_coverage" : "false",
+        "//command_line_option:platforms" : "//bazel/platforms:baremetal_riscv"
+    }
 
 baremetal_riscv_transition = transition(
     implementation = _baremetal_riscv_transition,
     inputs = [],
-    outputs = ["//command_line_option:platforms"]
+    outputs = [
+        "//command_line_option:collect_code_coverage",
+        "//command_line_option:platforms",
+    ]
 )
 
 def _riscv_flat_bin(ctx):
