@@ -45,7 +45,7 @@ riscv_flat_bin = rule(
     }
 )
 
-_RISCV_BAREMETAL_COPTS = ["-ffreestanding", "-nostdlib"]
+_RISCV_BAREMETAL_COPTS = ["-march=rv32im", "-mabi=ilp32", "-ffreestanding", "-nostdlib"]
 
 def riscv_cc_binary(name = None, srcs = [], linker_script = None, *args, **kwargs):
     if args:

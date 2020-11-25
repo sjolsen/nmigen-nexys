@@ -5,12 +5,12 @@ filegroup(name = "empty")
 cc_toolchain_config(
     name = "riscv_cc_toolchain_config",
     cxx_builtin_include_directories = [
-        "/opt/riscv32/lib/gcc/riscv32-unknown-elf/9.2.0/include",
+        "/usr/lib/gcc/riscv64-unknown-elf/8.3.0/include",
     ],
-    installation_directory = "/opt/riscv32",
+    installation_directory = "/usr",
     toolchain_identifier = "riscv-toolchain",
     host_system_name = "x86_64-linux-gnu",
-    target_system_name = "riscv32-unknown-elf",
+    target_system_name = "riscv64-unknown-elf",
     target_cpu = "riscv",
     target_libc = "unknown",
     compiler = "gcc",
