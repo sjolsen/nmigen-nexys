@@ -1,9 +1,10 @@
 """Tests for nmigen_nexys.serial.uart."""
 
+import os
 import unittest
 
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 
 from nmigen_nexys.core import util
 from nmigen_nexys.serial import uart

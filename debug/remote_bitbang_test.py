@@ -4,7 +4,8 @@ from typing import NamedTuple
 import unittest
 
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.hdl.ast import SignalSet
+from nmigen.sim import *
 
 from nmigen_nexys.core import edge
 from nmigen_nexys.core import util

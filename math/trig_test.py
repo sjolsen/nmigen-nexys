@@ -6,7 +6,7 @@ from typing import Callable
 import unittest
 
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 
 from nmigen_nexys.core import util
 from nmigen_nexys.math import lut

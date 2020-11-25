@@ -1,9 +1,10 @@
 """Tests for nmigen_nexys.board.nexysa7100t.uart_demo."""
 
+import os
 import unittest
 
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 from nmigen.hdl.rec import *
 
 from nmigen_nexys.board.nexysa7100t import uart_demo

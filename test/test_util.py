@@ -5,7 +5,8 @@ from typing import Generator, Union, TypeVar
 import unittest
 
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
+from nmigen.sim.core import Command
 
 from nmigen_nexys.core import util
 

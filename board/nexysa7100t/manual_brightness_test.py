@@ -4,7 +4,7 @@ from typing import List
 import unittest
 
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 
 from nmigen_nexys.board.nexysa7100t import manual_brightness
 from nmigen_nexys.core import util

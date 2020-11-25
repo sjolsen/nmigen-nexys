@@ -1,9 +1,10 @@
+import os
 from typing import List, NamedTuple
 import unittest
 
 from minerva import core
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 from nmigen.hdl.rec import Record
 from rules_python.python.runfiles import runfiles
 

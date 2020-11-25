@@ -3,7 +3,7 @@ from typing import Any, Generator, Iterable, List, NamedTuple, Optional, Union
 import unittest
 
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 
 from nmigen_nexys.core import edge
 from nmigen_nexys.core import util

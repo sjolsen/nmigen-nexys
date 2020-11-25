@@ -1,10 +1,11 @@
 """Tests for nmigen_nexys.serial.spi."""
 
+import os
 from typing import List, NamedTuple
 import unittest
 
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 
 from nmigen_nexys.core import edge
 from nmigen_nexys.core import shift_register

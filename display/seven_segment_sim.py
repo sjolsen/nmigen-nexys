@@ -1,7 +1,7 @@
 """Simulation waveform generator for nmigen_nexys.display.seven_segment."""
 
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 
 from nmigen_nexys.core import util
 from nmigen_nexys.display import seven_segment

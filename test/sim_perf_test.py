@@ -2,12 +2,13 @@
 
 import contextlib
 import cProfile
+import os
 import unittest
 
 from absl import app
 from absl import flags
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 from nmigen.hdl.rec import *
 
 from nmigen_nexys.board.nexysa7100t import uart_demo

@@ -1,10 +1,11 @@
 """Tests for nmigen_nexys.pmod.oled.pmod_oled."""
 
+import os
 from typing import List, NamedTuple
 import unittest
 
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 from nmigen.hdl.rec import *
 
 from nmigen_nexys.core import edge

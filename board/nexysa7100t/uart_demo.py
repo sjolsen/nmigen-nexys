@@ -63,7 +63,7 @@ class UARTDemo(Elaboratable):
 
     def elaborate(self, _: Platform) -> Module:
         m = Module()
-        m.d.comb += self.pins.rts.eq(self.pins.cts)
+        m.d.comb += self.pins.cts.eq(self.pins.rts)
 
         baud_rate = 12_000_000
         m.submodules.tx = tx = uart.Transmit(baud_rate)

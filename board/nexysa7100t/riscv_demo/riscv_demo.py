@@ -21,8 +21,9 @@ class RiscvDemo(Elaboratable):
         m.d.comb += [
             rbb.uart.rx.eq(uart.rx),
             uart.tx.eq(rbb.uart.tx),
-            uart.rts.eq(rbb.uart.rts_n),
-            rbb.uart.cts_n.eq(uart.cts),
+            # TODO: RTS and CTS should probably be swapped in RemoteBitbang
+            uart.cts.eq(rbb.uart.rts_n),
+            rbb.uart.cts_n.eq(uart.rts),
         ]
         m.d.comb += [
             cpu.jtag.tck.eq(rbb.jtag.tck),

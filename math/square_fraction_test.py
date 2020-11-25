@@ -3,7 +3,7 @@
 import unittest
 
 from nmigen import *
-from nmigen.back.pysim import *
+from nmigen.sim import *
 
 from nmigen_nexys.math import square_fraction
 
