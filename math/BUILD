@@ -1,3 +1,4 @@
+load("@pip_deps//:requirements.bzl", "requirement")
 load(
     "@rules_python//python:defs.bzl",
     "py_library",
@@ -9,7 +10,7 @@ package(default_visibility = ["//visibility:public"])
 py_library(
     name = "bcd",
     srcs = ["bcd.py"],
-    deps = ["//pip:nmigen"],
+    deps = [requirement("nmigen")],
 )
 
 py_test(
@@ -19,8 +20,8 @@ py_test(
     deps = [
         ":bcd",
         "//core:util",
-        "//pip:nmigen",
         "//test:test_util",
+        requirement("nmigen"),
     ],
 )
 
@@ -29,7 +30,7 @@ py_library(
     srcs = ["lfsr.py"],
     deps = [
         "//core:shift_register",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )
 
@@ -38,14 +39,14 @@ py_library(
     srcs = ["lut.py"],
     deps = [
         "//core:util",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )
 
 py_library(
     name = "square_fraction",
     srcs = ["square_fraction.py"],
-    deps = ["//pip:nmigen"],
+    deps = [requirement("nmigen")],
 )
 
 py_test(
@@ -54,7 +55,7 @@ py_test(
     srcs = ["square_fraction_test.py"],
     deps = [
         ":square_fraction",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )
 
@@ -64,7 +65,7 @@ py_library(
     deps = [
         ":lut",
         "//core:util",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )
 
@@ -76,6 +77,6 @@ py_test(
         ":lut",
         ":trig",
         "//core:util",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )

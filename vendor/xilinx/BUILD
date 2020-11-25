@@ -1,4 +1,5 @@
 load(":toolchain.bzl", "xilinx_toolchain")
+load("@pip_deps//:requirements.bzl", "requirement")
 load("@rules_python//python:defs.bzl", "py_library")
 
 package(default_visibility = ["//visibility:public"])
@@ -8,7 +9,7 @@ toolchain_type(name = "toolchain_type")
 py_library(
     name = "macro",
     srcs = ["macro.py"],
-    deps = ["//pip:nmigen"],
+    deps = [requirement("nmigen")],
 )
 
 py_binary(
@@ -19,7 +20,7 @@ py_binary(
 py_library(
     name = "primitive",
     srcs = ["primitive.py"],
-    deps = ["//pip:nmigen"],
+    deps = [requirement("nmigen")],
 )
 
 xilinx_toolchain(

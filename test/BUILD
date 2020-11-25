@@ -1,3 +1,4 @@
+load("@pip_deps//:requirements.bzl", "requirement")
 load(
     "@rules_python//python:defs.bzl",
     "py_library",
@@ -13,7 +14,7 @@ py_library(
         ":test_util",
         "//core:edge",
         "//core:util",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )
 
@@ -24,10 +25,10 @@ py_test(
     deps = [
         "//board/nexysa7100t:uart_demo",
         "//core:util",
-        "//pip:absl",
-        "//pip:nmigen",
         "//serial:uart",
         "//test:test_util",
+        requirement("absl-py"),
+        requirement("nmigen"),
     ],
 )
 
@@ -36,6 +37,6 @@ py_library(
     srcs = ["test_util.py"],
     deps = [
         "//core:util",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )

@@ -1,3 +1,4 @@
+load("@pip_deps//:requirements.bzl", "requirement")
 load(
     "@rules_python//python:defs.bzl",
     "py_library",
@@ -9,8 +10,8 @@ py_library(
     name = "remote_bitbang",
     srcs = ["remote_bitbang.py"],
     deps = [
-        "//pip:nmigen",
         "//serial:uart",
+        requirement("nmigen"),
     ],
 )
 
@@ -21,9 +22,9 @@ py_test(
     deps = [
         ":remote_bitbang",
         "//core:util",
-        "//pip:nmigen",
         "//serial:uart",
         "//test:event",
         "//test:test_util",
+        requirement("nmigen"),
     ],
 )

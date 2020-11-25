@@ -1,3 +1,4 @@
+load("@pip_deps//:requirements.bzl", "requirement")
 load(
     "@rules_python//python:defs.bzl",
     "py_library",
@@ -12,7 +13,7 @@ py_library(
     deps = [
         "//core:pwm",
         "//math:lut",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )
 
@@ -23,8 +24,8 @@ py_test(
     deps = [
         ":seven_segment",
         "//core:util",
-        "//pip:nmigen",
         "//test:test_util",
+        requirement("nmigen"),
     ],
 )
 
@@ -35,8 +36,8 @@ py_test(
     deps = [
         ":seven_segment",
         "//core:util",
-        "//pip:nmigen",
         "//test:test_util",
+        requirement("nmigen"),
     ],
 )
 
@@ -46,7 +47,7 @@ py_library(
     deps = [
         "//core:shift_register",
         "//core:util",
-        "//pip:nmigen",
         "//serial:spi",
+        requirement("nmigen"),
     ],
 )

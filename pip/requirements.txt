@@ -1,22 +1,13 @@
 absl-py
-Jinja2~=2.11
 
 # master as of 2020-04-13 01:05 PDT
-git+https://github.com/lambdaconcept/jtagtap.git@851b71bb8bab68b082405170f0e3f3464609a297
-
-MarkupSafe
+jtagtap @ git+https://github.com/lambdaconcept/jtagtap.git@851b71bb8bab68b082405170f0e3f3464609a297
 
 # master as of 2020-04-13 01:05 PDT
-git+https://github.com/lambdaconcept/minerva.git@d06b5d2fd354cad3040f0efaf58b2f206395b7d0
-# file:/home/sjo/nmigen/minerva#egg=minerva
+minerva[debug] @ git+https://github.com/lambdaconcept/minerva.git@d06b5d2fd354cad3040f0efaf58b2f206395b7d0
 
 # master as of 2020-11-24 21:21 CST
-git+https://github.com/nmigen/nmigen.git@59ef6e6a1c4e389a41148554f2dd492328820ecd#egg=nmigen
-# file:/home/sjo/nmigen/nmigen#egg=nmigen
+nmigen @ git+https://github.com/nmigen/nmigen.git@59ef6e6a1c4e389a41148554f2dd492328820ecd
 
 # master as of 2020-11-24 21:21 CST
-git+https://github.com/nmigen/nmigen-boards.git@4bef280a80151161fc885ac46d2e22bf79d2cb2f
-# git+file://C:/Users/Stuart/nmigen-boards@master
-
-pyvcd~=0.2.0
-six
+nmigen_boards @ git+https://github.com/nmigen/nmigen-boards.git@4bef280a80151161fc885ac46d2e22bf79d2cb2f

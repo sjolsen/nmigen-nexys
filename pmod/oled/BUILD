@@ -1,3 +1,4 @@
+load("@pip_deps//:requirements.bzl", "requirement")
 load(
     "@rules_python//python:defs.bzl",
     "py_library",
@@ -14,7 +15,7 @@ py_library(
         "//core:timer",
         "//core:util",
         "//display:ssd1306",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )
 
@@ -26,7 +27,7 @@ py_library(
         "//core:flop",
         "//core:util",
         "//display:ssd1306",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )
 
@@ -39,9 +40,9 @@ py_test(
         "//core:edge",
         "//core:util",
         "//display:ssd1306",
-        "//pip:nmigen",
         "//serial:spi",
         "//test:event",
         "//test:test_util",
+        requirement("nmigen"),
     ],
 )

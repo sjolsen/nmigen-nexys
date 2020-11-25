@@ -1,3 +1,4 @@
+load("@pip_deps//:requirements.bzl", "requirement")
 load(
     "@rules_python//python:defs.bzl",
     "py_library",
@@ -14,7 +15,7 @@ py_library(
         "//core:shift_register",
         "//core:timer",
         "//core:util",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )
 
@@ -27,8 +28,8 @@ py_test(
         "//core:edge",
         "//core:shift_register",
         "//core:util",
-        "//pip:nmigen",
         "//test:test_util",
+        requirement("nmigen"),
     ],
 )
 
@@ -40,7 +41,7 @@ py_library(
         "//core:shift_register",
         "//core:timer",
         "//core:util",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )
 
@@ -51,7 +52,7 @@ py_test(
     deps = [
         ":uart",
         "//core:util",
-        "//pip:nmigen",
         "//test:test_util",
+        requirement("nmigen"),
     ],
 )

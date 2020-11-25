@@ -1,3 +1,4 @@
+load("@pip_deps//:requirements.bzl", "requirement")
 load(
     "@rules_python//python:defs.bzl",
     "py_library",
@@ -18,8 +19,8 @@ nmigen_design(
         "//core:timer",
         "//bazel:top",
         "//math:trig",
-        "//pip:absl",
-        "//pip:nmigen",
+        requirement("absl-py"),
+        requirement("nmigen"),
     ],
 )
 
@@ -30,9 +31,9 @@ nmigen_design(
     deps = [
         ":nexysa7100t",
         "//bazel:top",
-        "//pip:absl",
-        "//pip:nmigen",
         "//vendor/xilinx:macro",
+        requirement("absl-py"),
+        requirement("nmigen"),
     ],
 )
 
@@ -43,7 +44,7 @@ py_library(
     deps = [
         "//display:seven_segment",
         "//math:bcd",
-        "//pip:nmigen",
+        requirement("nmigen"),
     ],
 )
 
@@ -57,8 +58,8 @@ nmigen_design(
         "//color:srgb",
         "//bazel:top",
         "//display:seven_segment",
-        "//pip:absl",
-        "//pip:nmigen",
+        requirement("absl-py"),
+        requirement("nmigen"),
     ],
 )
 
@@ -70,8 +71,8 @@ py_test(
         ":manual_brightness",
         "//core:util",
         "//display:seven_segment",
-        "//pip:nmigen",
         "//test:test_util",
+        requirement("nmigen"),
     ],
 )
 
@@ -81,9 +82,9 @@ nmigen_design(
     srcs = ["nexysa7100t.py"],
     deps = [
         "//bazel:top",
-        "//pip:absl",
-        "//pip:nmigen",
-        "//pip:nmigen_boards",
+        requirement("absl-py"),
+        requirement("nmigen"),
+        requirement("nmigen_boards"),
     ],
 )
 
@@ -95,9 +96,9 @@ nmigen_design(
         ":nexysa7100t",
         "//core:timer",
         "//bazel:top",
-        "//pip:absl",
-        "//pip:nmigen",
         "//pmod:pmod_8ld",
+        requirement("absl-py"),
+        requirement("nmigen"),
     ],
 )
 
@@ -113,9 +114,9 @@ nmigen_design(
         "//core:util",
         "//display:ssd1306",
         "//math:lfsr",
-        "//pip:absl",
-        "//pip:nmigen",
         "//pmod/oled:pmod_oled",
+        requirement("absl-py"),
+        requirement("nmigen"),
     ],
 )
 
@@ -127,8 +128,8 @@ nmigen_design(
         ":nexysa7100t",
         "//bazel:top",
         "//display:seven_segment",
-        "//pip:absl",
-        "//pip:nmigen",
+        requirement("absl-py"),
+        requirement("nmigen"),
     ],
 )
 
@@ -139,9 +140,9 @@ nmigen_design(
     deps = [
         ":nexysa7100t",
         "//bazel:top",
-        "//pip:absl",
-        "//pip:nmigen",
         "//serial:uart",
+        requirement("absl-py"),
+        requirement("nmigen"),
     ],
 )
 
@@ -152,8 +153,8 @@ py_test(
     deps = [
         ":uart_demo",
         "//core:util",
-        "//pip:nmigen",
         "//serial:uart",
         "//test:test_util",
+        requirement("nmigen"),
     ],
 )

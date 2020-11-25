@@ -1,3 +1,4 @@
+load("@pip_deps//:requirements.bzl", "requirement")
 load(
     "@rules_python//python:defs.bzl",
     "py_binary",
@@ -15,7 +16,7 @@ py_library(
     name = "top",
     srcs = ["top.py"],
     deps = [
-        "//pip:absl",
-        "//pip:nmigen",
+        requirement("absl-py"),
+        requirement("nmigen"),
     ],
 )
