@@ -4,30 +4,18 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "rules_python",
-    sha256 = "98c9b903f6e8fe20b7e56d19c4822c8c49a11b475bd4ec0ca6a564e8bc5d5fa2",
-    url = "https://github.com/bazelbuild/rules_python/archive/a0fbf98d4e3a232144df4d0d80b577c7a693b570.zip",
-    strip_prefix = "rules_python-a0fbf98d4e3a232144df4d0d80b577c7a693b570",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.1.0/rules_python-0.1.0.tar.gz",
+    sha256 = "b6d46438523a3ec0f3cead544190ee13223a52f6a6765a29eae7b7cc24cc83a0",
 )
 
-load("@rules_python//python:pip.bzl", "pip3_import", "pip_repositories")
-load("@rules_python//python:repositories.bzl", "py_repositories")
-
-pip_repositories()
-
-py_repositories()
+load("@rules_python//python:pip.bzl", "pip_install")
 
 # Create a central repo that knows about the dependencies needed for
 # requirements.txt.
-pip3_import(
+pip_install(
     name = "pip_deps",
     requirements = "//pip:requirements.txt",
 )
-
-# Load the central repo's install function from its `//:requirements.bzl` file,
-# and call it.
-load("@pip_deps//:requirements.bzl", "pip_install")
-
-pip_install()
 
 register_execution_platforms("//bazel/platforms:baremetal_riscv")
 
