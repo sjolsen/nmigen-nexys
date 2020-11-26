@@ -17,7 +17,9 @@ def __build_design(ctx):
         env = {
             "HOME": ctx.label.name + "_home",
             "VIVADO": tools.vivado,
-            "YOSYS": tools.yosys,
+            "YOSYS": "/opt/fpga/bin/yosys",
+            "NEXTPNR_ECP5": "/opt/fpga/bin/nextpnr-ecp5",
+            "ECPPACK": "/opt/fpga/bin/ecppack",
         },
     )
     ctx.actions.run_shell(
