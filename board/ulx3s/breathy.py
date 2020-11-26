@@ -55,7 +55,7 @@ class Blinky(Elaboratable):
         m.submodules += pwms
 
         m.submodules.sin_timer = sin_timer = timer.UpTimer(
-            clk_period * 10 // 256)
+            clk_period * 5 // 256)
         with m.If(sin_timer.triggered):
             for phase in phases:
                 m.d.sync += phase.eq(phase + 1)
