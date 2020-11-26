@@ -13,3 +13,19 @@ nmigen_design(
         requirement("nmigen_boards"),
     ],
 )
+
+nmigen_design(
+    name = "breathy",
+    size = "small",
+    srcs = ["breathy.py"],
+    deps = [
+        "//bazel:top",
+        "//color:srgb",
+        "//core:pwm",
+        "//core:timer",
+        "//math:trig",
+        requirement("absl-py"),
+        requirement("nmigen"),
+        requirement("nmigen_boards"),
+    ],
+)
