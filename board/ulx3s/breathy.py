@@ -40,16 +40,39 @@ class Blinky(Elaboratable):
         m = Module()
 
         clk_period = int(platform.default_clk_frequency)
-        m.submodules.sin_timer = sin_timer = timer.UpTimer(
-            clk_period * 10 // 256)
         m.submodules.sin = sin = trig.SineLUT(Signal(8), Signal(8))
-        with m.If(sin_timer.triggered):
-            m.d.sync += sin.input.eq(sin.input + 1)
         m.submodules.gamma = gamma = srgb.sRGBGammaLUT(sin.output, Signal(12))
-        m.submodules.pwm = pwm = pwm_module.PWM(gamma.output)
 
         leds = get_leds(platform)
-        m.d.comb += Cat(leds).eq(Repl(pwm.output, len(leds)))
+        phases = []
+        pwms = []
+        for i, led in enumerate(leds):
+            phase = Signal(8, reset=round(256 * (i / len(leds))))
+            phases.append(phase)
+            pwm = pwm_module.PWM(Signal(gamma.output.shape(), name='duty_cycle'))
+            pwms.append(pwm)
+            m.d.comb += led.eq(pwm.output)
+        m.submodules += pwms
+
+        m.submodules.sin_timer = sin_timer = timer.UpTimer(
+            clk_period * 10 // 256)
+        with m.If(sin_timer.triggered):
+            for phase in phases:
+                m.d.sync += phase.eq(phase + 1)
+
+        m.d.sync += sin.input.eq(phases[0])
+        with m.FSM(reset='IDLE'):
+            with m.State('IDLE'):
+                with m.If(sin_timer.triggered):
+                    m.next = 'UPDATE_0'
+            for i, pwm in enumerate(pwms):
+                with m.State(f'UPDATE_{i}'):
+                    m.d.sync += pwm.duty_cycle.eq(gamma.output)
+                    if i < len(leds) - 1:
+                        m.d.sync += sin.input.eq(phases[i + 1])
+                        m.next = f'UPDATE_{i + 1}'
+                    else:
+                        m.next = 'IDLE'
 
         return m
 
