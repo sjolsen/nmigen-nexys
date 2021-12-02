@@ -1,5 +1,6 @@
 """Simple timer implementations."""
 
+import fractions
 import numbers
 from typing import Union
 
@@ -27,9 +28,9 @@ class DownTimer(Elaboratable):
     running from period - 1 down to zero.
     """
 
-    def __init__(self, period: numbers.Rational):
+    def __init__(self, period: numbers.Rational, max_denominator: int = 10):
         super().__init__()
-        self.period = period
+        self.period = fractions.Fraction(period).limit_denominator(max_denominator)
         self.reload = Signal(reset=0)
         self.counter = Signal(range(self.period.numerator),
                               reset=self.period.numerator - 1)
@@ -56,9 +57,9 @@ class UpTimer(Elaboratable):
     running from zero up to period - 1.
     """
 
-    def __init__(self, period: numbers.Rational):
+    def __init__(self, period: numbers.Rational, max_denominator: int = 10):
         super().__init__()
-        self.period = period
+        self.period = fractions.Fraction(period).limit_denominator(max_denominator)
         self.reload = Signal(reset=0)
         self.counter = Signal(range(self.period.numerator), reset=0)
         self.triggered = Signal()

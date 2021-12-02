@@ -26,6 +26,28 @@ py_test(
 )
 
 py_library(
+    name = "delta_sigma",
+    srcs = ["delta_sigma.py"],
+    deps = [
+        "//core:util",
+        requirement("nmigen"),
+    ],
+)
+
+py_test(
+    name = "delta_sigma_test",
+    size = "small",
+    srcs = ["delta_sigma_test.py"],
+    deps = [
+        ":delta_sigma",
+        "//core:timer",
+        "//core:util",
+        "//test:test_util",
+        requirement("nmigen"),
+    ],
+)
+
+py_library(
     name = "lfsr",
     srcs = ["lfsr.py"],
     deps = [

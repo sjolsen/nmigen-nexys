@@ -134,6 +134,38 @@ nmigen_design(
 )
 
 nmigen_design(
+    name = "synth_demo",
+    size = "small",
+    srcs = ["synth_demo.py"],
+    deps = [
+        ":nexysa7100t",
+        "//bazel:top",
+        "//core:shift_register",
+        "//core:timer",
+        "//core:util",
+        "//math:delta_sigma",
+        "//math:trig",
+        "//serial:uart",
+        requirement("absl-py"),
+        requirement("nmigen"),
+    ],
+)
+
+py_test(
+    name = "synth_demo_test",
+    size = "small",
+    srcs = ["synth_demo_test.py"],
+    deps = [
+        ":synth_demo",
+        "//core:util",
+        "//serial:uart",
+        "//test:test_util",
+        requirement("mido"),
+        requirement("nmigen"),
+    ],
+)
+
+nmigen_design(
     name = "uart_demo",
     size = "small",
     srcs = ["uart_demo.py"],
