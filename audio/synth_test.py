@@ -5,7 +5,7 @@ import mido
 from nmigen import *
 from nmigen.back.pysim import *
 
-from nmigen_nexys.board.nexysa7100t import synth_demo
+from nmigen_nexys.audio import synth
 from nmigen_nexys.core import util
 from nmigen_nexys.serial import uart
 from nmigen_nexys.test import test_util
@@ -16,7 +16,7 @@ class BasicMIDISinkTest(unittest.TestCase):
     def test_note_on_off(self):
         m = Module()
         m.submodules.tx = tx = uart.Transmit(12_000_000)
-        m.submodules.midi = midi = synth_demo.BasicMIDISink(
+        m.submodules.midi = midi = synth.BasicMIDISink(
             baud_rate=12_000_000)
         m.d.comb += midi.rx.eq(tx.output)
         m.submodules.timer = timer = test_util.Timer(self, timeout_s=10e-6)
@@ -39,9 +39,9 @@ class BasicMIDISinkTest(unittest.TestCase):
         def check():
             yield Active()
             yield from test_util.WaitSync(
-                midi.channels[0][synth_demo.Parse12TETNote('A4')])
+                midi.channels[0][synth.Parse12TETNote('A4')])
             yield from test_util.WaitSync(
-                ~midi.channels[0][synth_demo.Parse12TETNote('A4')])
+                ~midi.channels[0][synth.Parse12TETNote('A4')])
 
         sim.add_sync_process(driver)
         sim.add_sync_process(check)
@@ -56,7 +56,7 @@ class BasicMIDISinkTest(unittest.TestCase):
     def test_note_on_0(self):
         m = Module()
         m.submodules.tx = tx = uart.Transmit(12_000_000)
-        m.submodules.midi = midi = synth_demo.BasicMIDISink(
+        m.submodules.midi = midi = synth.BasicMIDISink(
             baud_rate=12_000_000)
         m.d.comb += midi.rx.eq(tx.output)
         m.submodules.timer = timer = test_util.Timer(self, timeout_s=10e-6)
@@ -79,9 +79,9 @@ class BasicMIDISinkTest(unittest.TestCase):
         def check():
             yield Active()
             yield from test_util.WaitSync(
-                midi.channels[0][synth_demo.Parse12TETNote('A4')])
+                midi.channels[0][synth.Parse12TETNote('A4')])
             yield from test_util.WaitSync(
-                ~midi.channels[0][synth_demo.Parse12TETNote('A4')])
+                ~midi.channels[0][synth.Parse12TETNote('A4')])
 
         sim.add_sync_process(driver)
         sim.add_sync_process(check)
@@ -94,11 +94,11 @@ class BasicMIDISinkTest(unittest.TestCase):
             sim.run()
 
 
-# class SynthDemoTest(unittest.TestCase):
+# class DemoTest(unittest.TestCase):
 
 #     def test_demo(self):
 #         m = Module()
-#         m.submodules.demo = demo = synth_demo.SynthDemo()
+#         m.submodules.demo = demo = synth.Demo()
 #         m.d.comb += demo.start.eq(1)
 #         sim = Simulator(m)
 #         sim.add_clock(1.0 / util.SIMULATION_CLOCK_FREQUENCY)
