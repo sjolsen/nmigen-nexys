@@ -1,6 +1,10 @@
 load("//bazel:top.bzl", "nmigen_design")
 load("@pip_deps//:requirements.bzl", "requirement")
-load("@rules_python//python:defs.bzl", "py_test")
+load(
+    "@rules_python//python:defs.bzl",
+    "py_library",
+    "py_test",
+)
 
 package(default_visibility = ["//visibility:public"])
 
@@ -31,16 +35,26 @@ nmigen_design(
     ],
 )
 
+py_library(
+    name = "fm",
+    srcs = ["fm.py"],
+    deps = [
+        "//core:util",
+        "//vendor/lattice:primitive",
+        requirement("nmigen"),
+    ],
+)
+
 nmigen_design(
     name = "fm_transmitter",
     size = "small",
     srcs = ["fm_transmitter.py"],
     deps = [
+        ":fm",
         "//bazel:top",
         "//core:timer",
         "//core:util",
         "//math:trig",
-        "//vendor/lattice:primitive",
         requirement("absl-py"),
         requirement("nmigen"),
         requirement("nmigen_boards"),
