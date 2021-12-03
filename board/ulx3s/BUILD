@@ -46,6 +46,20 @@ py_library(
 )
 
 nmigen_design(
+    name = "fm_synth",
+    size = "small",
+    srcs = ["fm_synth.py"],
+    deps = [
+        ":fm",
+        "//audio:synth",
+        "//bazel:top",
+        requirement("absl-py"),
+        requirement("nmigen"),
+        requirement("nmigen_boards"),
+    ],
+)
+
+nmigen_design(
     name = "fm_transmitter",
     size = "small",
     srcs = ["fm_transmitter.py"],
